@@ -10,6 +10,7 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data
+      - ./.env:/app/backend/.env:ro
     environment:
       - DATABASE_URL=sqlite:///./data/topflow.db
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production-2024}
