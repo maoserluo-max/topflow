@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 后端API服务
   backend:
@@ -12,7 +10,6 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data
-      - ./topflow.db:/app/topflow.db
     environment:
       - DATABASE_URL=sqlite:///./data/topflow.db
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production-2024}
@@ -20,10 +17,11 @@ services:
     networks:
       - topflow-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
   # 前端Web服务
   frontend:
