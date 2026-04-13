@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+.venv/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 构建输出
+frontend/dist/
+*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 数据库
+*.db
+data/
+
+# 环境变量
+.env
+.env.local
+.env.production
+
+# 日志
+logs/
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# SSL证书
+ssl/
+
+# 文档
+*.md
+!DEPLOYMENT.md
+
+# Git
+.git/
+.gitignore
+
+# Demo相关（保留但不需要打包）
+demo.py
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
