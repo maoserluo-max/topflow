@@ -6,7 +6,6 @@
           <span>视频管理</span>
           <div class="header-actions">
             <el-button type="primary" @click="showCreateDialog">新增视频</el-button>
-            <el-button @click="showFetchDialog">抓取元数据</el-button>
           </div>
         </div>
       </template>
@@ -21,16 +20,16 @@
             </el-select>
           </el-form-item>
           <el-form-item label="地区">
-            <el-input v-model="filters.region" placeholder="输入地区" clearable style="width: 120px;" />
+            <el-select v-model="filters.region" placeholder="选择地区" clearable style="width: 120px;">
+              <el-option v-for="r in regionOptions" :key="r.value" :label="r.label" :value="r.value" />
+            </el-select>
           </el-form-item>
           <el-form-item label="达人">
             <el-input v-model="filters.influencer_name" placeholder="输入达人名称" clearable style="width: 150px;" />
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="filters.status" placeholder="选择状态" clearable style="width: 120px;">
-              <el-option label="待确认" value="pending" />
-              <el-option label="已发布" value="published" />
-              <el-option label="已完成" value="completed" />
+              <el-option v-for="s in statusOptions" :key="s.value" :label="s.label" :value="s.value" />
             </el-select>
           </el-form-item>
           <el-form-item label="发布日期">
@@ -57,7 +56,9 @@
             <el-tag :type="getPlatformType(row.platform)" size="small">{{ row.platform.toUpperCase() }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="region" label="地区" width="80" />
+        <el-table-column prop="region" label="地区" width="80">
+          <template #default="{ row }">{{ getRegionName(row.region) }}</template>
+        </el-table-column>
         <el-table-column prop="influencer_name" label="达人" width="130" />
         <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
         <el-table-column prop="price_usd" label="价格($)" width="90" align="right">
@@ -104,12 +105,41 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑视频' : '新增视频'" width="700px">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑视频' : '新增视频'" width="750px">
+      <el-alert 
+        v-if="!isEdit" 
+        title="提示：可粘贴视频链接并点击「抓取数据」自动填充信息，也可手动填写所有字段" 
+        type="info" 
+        :closable="false" 
+        show-icon 
+        style="margin-bottom: 20px;" 
+      />
+
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
+
+        <el-divider content-position="left">视频链接（可选）</el-divider>
+
+        <el-row :gutter="20">
+          <el-col :span="18">
+            <el-form-item label="视频链接">
+              <el-input v-model="form.video_url" placeholder="粘贴TikTok/Instagram/YouTube视频链接" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label=" " :label-width="'20px'">
+              <el-button type="success" :loading="fetching" @click="fetchMetadataInDialog" :disabled="!form.video_url">
+                抓取数据
+              </el-button>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-divider content-position="left">基本信息</el-divider>
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="平台" prop="platform">
-              <el-select v-model="form.platform" placeholder="选择平台">
+              <el-select v-model="form.platform" placeholder="选择平台" style="width: 100%;">
                 <el-option label="TikTok" value="tiktok" />
                 <el-option label="Instagram" value="ins" />
                 <el-option label="YouTube" value="youtube" />
@@ -118,7 +148,9 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="地区" prop="region">
-              <el-input v-model="form.region" placeholder="输入地区" />
+              <el-select v-model="form.region" placeholder="选择地区" style="width: 100%;">
+                <el-option v-for="r in regionOptions" :key="r.value" :label="r.label" :value="r.value" />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -130,38 +162,65 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="合作价格($)" prop="price_usd">
-              <el-input-number v-model="form.price_usd" :min="0" :precision="2" style="width: 100%;" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-form-item label="内容方向" prop="content_direction">
-          <el-input v-model="form.content_direction" placeholder="输入内容方向" />
-        </el-form-item>
-
-        <el-form-item label="标题" prop="title">
-          <el-input v-model="form.title" type="textarea" :rows="2" placeholder="输入视频标题" />
-        </el-form-item>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="发布日期" prop="publish_date">
-              <el-date-picker v-model="form.publish_date" type="datetime" placeholder="选择日期时间" style="width: 100%;" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="状态" prop="status">
-              <el-select v-model="form.status" placeholder="选择状态">
-                <el-option label="待确认" value="pending" />
-                <el-option label="已发布" value="published" />
-                <el-option label="已完成" value="completed" />
+            <el-form-item label="内容方向" prop="content_direction">
+              <el-select v-model="form.content_direction" placeholder="选择内容方向" style="width: 100%;">
+                <el-option v-for="d in directionOptions" :key="d.value" :label="d.label" :value="d.value" />
               </el-select>
             </el-form-item>
           </el-col>
         </el-row>
 
-        <el-divider>数据统计（自动获取或手动填写）</el-divider>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="合作价格($)" prop="price_usd">
+              <el-input-number v-model="form.price_usd" :min="0" :precision="2" style="width: 100%;" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="对接人" prop="contact_person">
+              <el-select 
+                v-if="canSelectAllUsers" 
+                v-model="form.contact_person" 
+                placeholder="选择对接人" 
+                filterable 
+                style="width: 100%;"
+              >
+                <el-option v-for="u in userList" :key="u.username" :label="u.full_name || u.username" :value="u.username" />
+              </el-select>
+              <el-input v-else v-model="form.contact_person" disabled :placeholder-value="currentUser" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="标题" prop="title">
+          <el-input v-model="form.title" type="textarea" :rows="2" placeholder="输入视频标题" />
+        </el-form-item>
+
+        <el-divider content-position="left">发布与状态</el-divider>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="发布日期" prop="publish_date">
+              <el-date-picker 
+                v-model="form.publish_date" 
+                type="date" 
+                placeholder="选择日期" 
+                format="YYYY-MM-DD" 
+                value-format="YYYY-MM-DD"
+                style="width: 100%;" 
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="状态" prop="status">
+              <el-select v-model="form.status" placeholder="选择状态" style="width: 100%;">
+                <el-option v-for="s in statusOptions" :key="s.value" :label="s.label" :value="s.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-divider content-position="left">数据统计（自动获取或手动填写）</el-divider>
 
         <el-row :gutter="20">
           <el-col :span="8">
@@ -188,26 +247,14 @@
             </el-form-item>
           </el-col>
           <el-col :span="16">
-            <el-form-item label="视频链接">
-              <el-input v-model="form.video_url" placeholder="输入视频链接" />
+            <el-form-item label="邮箱">
+              <el-input v-model="form.contact_email" placeholder="联系邮箱地址" />
             </el-form-item>
           </el-col>
         </el-row>
 
-        <el-divider>联系信息</el-divider>
-
         <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item label="对接人">
-              <el-input v-model="form.contact_person" placeholder="对接人姓名" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="邮箱">
-              <el-input v-model="form.contact_email" placeholder="邮箱地址" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
+          <el-col :span="12">
             <el-form-item label="WhatsApp">
               <el-input v-model="form.contact_whatsapp" placeholder="WhatsApp号码" />
             </el-form-item>
@@ -220,26 +267,11 @@
         <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
-
-    <el-dialog v-model="fetchDialogVisible" title="抓取视频元数据" width="500px">
-      <el-alert title="粘贴TikTok/Instagram/YouTube视频链接，系统将自动获取视频数据" type="info" :closable="false" show-icon style="margin-bottom: 20px;" />
-
-      <el-form @submit.prevent="fetchMetadata">
-        <el-form-item label="视频链接">
-          <el-input v-model="videoUrl" placeholder="https://www.tiktok.com/@user/video/xxx" />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <el-button @click="fetchDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="fetching" @click="fetchMetadata">开始抓取</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import api from '@/utils/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -264,6 +296,37 @@ const isEdit = ref(false)
 const editingId = ref(null)
 const submitting = ref(false)
 const formRef = ref()
+const fetching = ref(false)
+
+const currentUser = computed(() => userStore.user?.username || '')
+const userRole = computed(() => userStore.user?.role || '')
+
+const canSelectAllUsers = computed(() => {
+  return ['admin', 'manager'].includes(userRole.value)
+})
+
+const userList = ref([])
+
+const regionOptions = [
+  { value: 'ID', label: '印尼 (ID)' },
+  { value: 'MY', label: '马来西亚 (MY)' },
+  { value: 'TH', label: '泰国 (TH)' },
+  { value: 'TW', label: '台湾 (TW)' },
+  { value: 'KR', label: '韩国 (KR)' },
+  { value: 'JP', label: '日本 (JP)' }
+]
+
+const directionOptions = [
+  { value: 'FF', label: 'Free Fire' },
+  { value: 'MLBB', label: 'Mobile Legends' }
+]
+
+const statusOptions = [
+  { value: 'pending_review', label: '待审核' },
+  { value: 'pending_publish', label: '待发布' },
+  { value: 'published', label: '已发布' },
+  { value: 'completed', label: '已完成' }
+]
 
 const defaultForm = {
   platform: 'tiktok',
@@ -272,7 +335,7 @@ const defaultForm = {
   influencer_name: '',
   price_usd: null,
   title: '',
-  publish_date: null,
+  publish_date: new Date().toISOString().split('T')[0],
   play_count: 0,
   like_count: 0,
   comment_count: 0,
@@ -281,7 +344,7 @@ const defaultForm = {
   contact_person: '',
   contact_email: '',
   contact_whatsapp: '',
-  status: 'pending'
+  status: 'pending_review'
 }
 
 const form = reactive({ ...defaultForm })
@@ -291,12 +354,11 @@ const rules = {
   influencer_name: [{ required: true, message: '请输入达人名称', trigger: 'blur' }]
 }
 
-const fetchDialogVisible = ref(false)
-const videoUrl = ref('')
-const fetching = ref(false)
-
-onMounted(() => {
+onMounted(async () => {
   fetchVideos()
+  if (canSelectAllUsers.value) {
+    await fetchUsers()
+  }
 })
 
 async function fetchVideos() {
@@ -306,6 +368,8 @@ async function fetchVideos() {
     const params = {
       page: currentPage.value,
       page_size: pageSize.value,
+      sort_by: 'publish_date',
+      sort_order: 'desc',
       ...filters
     }
 
@@ -324,6 +388,15 @@ async function fetchVideos() {
   }
 }
 
+async function fetchUsers() {
+  try {
+    const response = await api.get('/users/')
+    userList.value = response.items || response || []
+  } catch (error) {
+    console.error('Fetch users error:', error)
+  }
+}
+
 function resetFilters() {
   Object.assign(filters, {
     platform: '',
@@ -339,7 +412,11 @@ function resetFilters() {
 function showCreateDialog() {
   isEdit.value = false
   editingId.value = null
-  Object.assign(form, defaultForm)
+  Object.assign(form, {
+    ...defaultForm,
+    publish_date: new Date().toISOString().split('T')[0],
+    contact_person: canSelectAllUsers.value ? '' : currentUser.value
+  })
   dialogVisible.value = true
 }
 
@@ -353,7 +430,7 @@ function editVideo(video) {
     influencer_name: video.influencer_name,
     price_usd: video.price_usd,
     title: video.title,
-    publish_date: video.publish_date ? new Date(video.publish_date) : null,
+    publish_date: video.publish_date ? video.publish_date.split('T')[0] : new Date().toISOString().split('T')[0],
     play_count: video.play_count,
     like_count: video.like_count,
     comment_count: video.comment_count,
@@ -368,15 +445,16 @@ function editVideo(video) {
 }
 
 async function handleSubmit() {
-  await formRef.value?.validate()
+  try {
+    await formRef.value?.validate()
+  } catch {
+    return
+  }
+
   submitting.value = true
 
   try {
     const data = { ...form }
-
-    if (data.publish_date instanceof Date) {
-      data.publish_date = data.publish_date.toISOString()
-    }
 
     if (isEdit.value) {
       await api.put(`/videos/${editingId.value}`, data)
@@ -411,40 +489,31 @@ function deleteVideo(video) {
   }).catch(() => {})
 }
 
-function showFetchDialog() {
-  videoUrl.value = ''
-  fetchDialogVisible.value = true
-}
-
-async function fetchMetadata() {
-  if (!videoUrl.value.trim()) {
-    ElMessage.warning('请输入视频链接')
+async function fetchMetadataInDialog() {
+  if (!form.video_url?.trim()) {
+    ElMessage.warning('请先输入视频链接')
     return
   }
 
   fetching.value = true
 
   try {
-    const response = await api.post('/videos/fetch-metadata', { url: videoUrl.value })
+    const response = await api.post('/videos/fetch-metadata', { url: form.video_url })
 
     ElMessage.success('抓取成功！已自动填充表单')
 
     Object.assign(form, {
-      platform: response.platform,
-      influencer_name: response.influencer_name,
-      title: response.video_title,
-      publish_date: response.publish_date ? new Date(response.publish_date) : null,
+      platform: response.platform || form.platform,
+      influencer_name: response.influencer_name || form.influencer_name,
+      title: response.video_title || form.title,
       play_count: response.play_count || 0,
       like_count: response.like_count || 0,
       comment_count: response.comment_count || 0,
-      share_count: response.share_count || 0,
-      video_url: response.video_url
+      share_count: response.share_count || 0
     })
-
-    fetchDialogVisible.value = false
-    showCreateDialog()
   } catch (error) {
     console.error('Fetch metadata error:', error)
+    ElMessage.warning('抓取失败，请手动填写数据')
   } finally {
     fetching.value = false
   }
@@ -471,13 +540,28 @@ function getPlatformType(platform) {
 }
 
 function getStatusType(status) {
-  const types = { pending: 'warning', published: '', completed: 'success' }
+  const types = { 
+    pending_review: 'info', 
+    pending_publish: 'warning', 
+    published: '', 
+    completed: 'success' 
+  }
   return types[status] || 'info'
 }
 
 function getStatusName(status) {
-  const names = { pending: '待确认', published: '已发布', completed: '已完成' }
+  const names = { 
+    pending_review: '待审核', 
+    pending_publish: '待发布', 
+    published: '已发布', 
+    completed: '已完成' 
+  }
   return names[status] || status
+}
+
+function getRegionName(region) {
+  const found = regionOptions.find(r => r.value === region)
+  return found ? found.label : region || '-'
 }
 </script>
 
