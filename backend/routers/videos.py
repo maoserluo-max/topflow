@@ -3,7 +3,7 @@ sys.path.append('..')
 from crawler import TopFlowCrawler
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, asc
 from typing import Optional
 from datetime import datetime
 
@@ -48,6 +48,8 @@ def get_videos(
     status: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    sort_by: Optional[str] = Query("created_at", description="排序字段"),
+    sort_order: Optional[str] = Query("desc", description="排序方向: asc/desc"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -70,10 +72,17 @@ def get_videos(
         query = query.filter(Video.publish_date <= end_date)
 
     total = query.count()
-    videos = query.order_by(desc(Video.created_at)).offset((page - 1) * page_size).limit(page_size).all()
+
+    sort_column = getattr(Video, sort_by, Video.created_at)
+    if sort_order and sort_order.lower() == "asc":
+        query = query.order_by(asc(sort_column))
+    else:
+        query = query.order_by(desc(sort_column))
+
+    videos = query.offset((page - 1) * page_size).limit(page_size).all()
 
     return {
-        "items": videos,
+        "items": [VideoResponse.from_orm(v) for v in videos],
         "total": total,
         "page": page,
         "page_size": page_size,
