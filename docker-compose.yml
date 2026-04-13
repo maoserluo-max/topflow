@@ -17,11 +17,11 @@ services:
     networks:
       - topflow-network
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 60s
 
   # 前端Web服务
   frontend:
@@ -34,8 +34,7 @@ services:
       - "80:80"
       - "443:443"
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     volumes:
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
