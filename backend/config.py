@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     
     DATABASE_URL: str = "sqlite:///./topflow.db"
-    SECRET_KEY: str = "your-secret-key-change-in-production-2024"
+    SECRET_KEY: str = "topflow-secret-key-2024-change-me"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     
@@ -19,3 +19,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+if len(settings.SECRET_KEY) > 72:
+    print(f"⚠️  WARNING: SECRET_KEY过长({len(settings.SECRET_KEY)}字符)，已自动截断至72字符")
+    settings.SECRET_KEY = settings.SECRET_KEY[:72]
