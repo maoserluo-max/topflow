@@ -4,17 +4,25 @@ FROM node:18-alpine AS builder
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm install --registry=https://registry.npmmirror.com
 
 COPY frontend/ ./
-RUN npm run build
+
+RUN npm run build || (echo "构建失败，尝试清理缓存重试..." && \
+    rm -rf node_modules package-lock.json && \
+    npm install && npm run build)
 
 # 阶段2：生产环境（Nginx）
 FROM nginx:alpine
+
+RUN apk add --no-cache curl
 
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
