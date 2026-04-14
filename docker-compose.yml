@@ -9,10 +9,10 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./data:/app/data
+      - ./data:/app/data:rw
       - ./.env:/app/backend/.env:ro
     environment:
-      - DATABASE_URL=sqlite:///./data/topflow.db
+      - DATABASE_URL=sqlite:////app/data/topflow.db
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production-2024}
       - CORS_ORIGINS=["http://43.160.238.9","http://localhost:3000"]
     networks:
