@@ -120,7 +120,7 @@ async function handleLogin() {
   errorMsg.value = ''
 
   try {
-    await userStore.login(form)
+    await userStore.login(form.username, form.password)
     router.push('/dashboard')
   } catch (error) {
     errorMsg.value = error.response?.data?.detail || '登录失败，请检查用户名和密码'
