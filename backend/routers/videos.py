@@ -94,11 +94,18 @@ def get_videos(
 
     total = query.count()
 
-    sort_column = getattr(Video, sort_by, Video.created_at)
-    if sort_order and sort_order.lower() == "asc":
-        query = query.order_by(asc(sort_column))
+    if sort_by == 'cpm':
+        cpm_expr = func.coalesce(Video.price_usd, 0) * 1000.0 / func.nullif(func.coalesce(Video.play_count, 0), 0)
+        if sort_order and sort_order.lower() == "asc":
+            query = query.order_by(asc(cpm_expr))
+        else:
+            query = query.order_by(desc(cpm_expr))
     else:
-        query = query.order_by(desc(sort_column))
+        sort_column = getattr(Video, sort_by, Video.created_at)
+        if sort_order and sort_order.lower() == "asc":
+            query = query.order_by(asc(sort_column))
+        else:
+            query = query.order_by(desc(sort_column))
 
     videos = query.offset((page - 1) * page_size).limit(page_size).all()
 
