@@ -94,7 +94,7 @@ class VideoBase(BaseModel):
     contact_person: Optional[str] = None
     contact_email: Optional[str] = None
     contact_whatsapp: Optional[str] = None
-    status: Optional[str] = "pending"
+    status: Optional[str] = "pending_review"
 
     @field_validator('platform')
     @classmethod
@@ -124,7 +124,7 @@ class VideoBase(BaseModel):
     @classmethod
     def validate_status(cls, v):
         if v is not None:
-            valid_statuses = ['pending', 'approved', 'rejected', 'published']
+            valid_statuses = ['pending_review', 'pending_publish', 'published', 'completed']
             if v not in valid_statuses:
                 raise ValueError(f'无效的状态，可选值: {", ".join(valid_statuses)}')
         return v
@@ -181,9 +181,9 @@ class VideoUpdate(BaseModel):
 
     @field_validator('status')
     @classmethod
-    def validate_status(cls, v):
+    def validate_status_update(cls, v):
         if v is not None:
-            valid_statuses = ['pending', 'approved', 'rejected', 'published']
+            valid_statuses = ['pending_review', 'pending_publish', 'published', 'completed']
             if v not in valid_statuses:
                 raise ValueError(f'无效的状态，可选值: {", ".join(valid_statuses)}')
         return v

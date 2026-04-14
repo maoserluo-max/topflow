@@ -55,7 +55,7 @@ class Video(Base):
     contact_email = Column(String(100))
     contact_whatsapp = Column(String(30))
     creator_id = Column(Integer, ForeignKey("users.id"))
-    status = Column(String(20), default="pending")
+    status = Column(String(20), default="pending_review")
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
