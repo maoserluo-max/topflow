@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     
+    COOKIES_FILE: str = "/app/data/youtube-cookies.txt"
+    
     CORS_ORIGINS: list = ["http://localhost:5173", "http://localhost:3000", "http://43.160.238.9:3000"]
     
     class Config:

@@ -93,29 +93,51 @@ def health_check():
 def crawler_diagnose():
     import yt_dlp
     import platform
+    import os
     result = {
         "yt_dlp_version": yt_dlp.version.__version__,
         "python_version": platform.python_version(),
         "platform": platform.platform(),
     }
-    try:
-        opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'skip_download': True,
-            'nocheckcertificate': True,
-            'socket_timeout': 15,
-            'format': 'worst',
-        }
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info('https://www.youtube.com/shorts/U9QPM3C9n7g', download=False)
-        result["test_result"] = "success"
-        result["test_video"] = {
-            "title": info.get('title', ''),
-            "uploader": info.get('uploader', ''),
-            "view_count": info.get('view_count', 0),
-        }
-    except Exception as e:
-        result["test_result"] = "failed"
-        result["test_error"] = str(e)[:500]
+    cookies_path = settings.COOKIES_FILE
+    result["cookies_file_configured"] = cookies_path
+    result["cookies_file_exists"] = os.path.exists(cookies_path) if cookies_path else False
+
+    test_url = 'https://www.youtube.com/shorts/U9QPM3C9n7g'
+    clients_to_test = [
+        ('android', {
+            'quiet': True, 'no_warnings': True, 'skip_download': True,
+            'nocheckcertificate': True, 'socket_timeout': 15, 'format': 'worst',
+            'extractor_args': {'youtube': {'player_client': ['android']}},
+        }),
+        ('ios', {
+            'quiet': True, 'no_warnings': True, 'skip_download': True,
+            'nocheckcertificate': True, 'socket_timeout': 15, 'format': 'worst',
+            'extractor_args': {'youtube': {'player_client': ['ios']}},
+        }),
+        ('default', {
+            'quiet': True, 'no_warnings': True, 'skip_download': True,
+            'nocheckcertificate': True, 'socket_timeout': 15, 'format': 'worst',
+        }),
+    ]
+
+    for client_name, opts in clients_to_test:
+        if cookies_path and os.path.exists(cookies_path):
+            opts['cookiefile'] = cookies_path
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(test_url, download=False)
+            result[f"test_{client_name}"] = {
+                "result": "success",
+                "title": info.get('title', ''),
+                "uploader": info.get('uploader', ''),
+                "view_count": info.get('view_count', 0),
+            }
+            break
+        except Exception as e:
+            result[f"test_{client_name}"] = {
+                "result": "failed",
+                "error": str(e)[:300],
+            }
+
     return result

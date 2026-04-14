@@ -14,9 +14,11 @@ import io
 from models import get_db, Video, User, OperationLog, UserRole, generate_video_code
 from auth import get_current_user, get_current_manager_or_admin, get_current_admin
 from schemas import VideoCreate, VideoUpdate, VideoResponse, CrawlerRequest, DashboardStats
+from config import settings
 
 router = APIRouter(prefix="/api/videos", tags=["视频管理"])
-crawler = TopFlowCrawler()
+crawler = TopFlowCrawler(cookies_file=settings.COOKIES_FILE)
+print(f"🔧 爬虫配置: cookies={settings.COOKIES_FILE}")
 
 
 @router.get("/generate-code")

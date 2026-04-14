@@ -2,11 +2,13 @@ import yt_dlp
 from typing import Dict, Optional
 import time
 import random
+import os
 
 
 class TopFlowCrawler:
-    def __init__(self, proxy: str = None):
+    def __init__(self, proxy: str = None, cookies_file: str = None):
         self.proxy = proxy
+        self.cookies_file = cookies_file
         self.last_error = None
         self._base_opts = {
             'quiet': True,
@@ -17,7 +19,6 @@ class TopFlowCrawler:
             'socket_timeout': 30,
             'retries': 3,
             'format': 'worst',
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         }
 
         if proxy:
@@ -30,15 +31,17 @@ class TopFlowCrawler:
         if platform == 'youtube':
             opts.update({
                 'extract_flat': False,
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': ['android'],
+                    }
+                },
             })
-        elif platform == 'tiktok':
-            opts['extractor_args'] = {
-                'tiktok': {
-                    'api_hostname': ['api16-normal-c-useast1a.tiktokv.com']
-                }
-            }
-        elif platform == 'ins':
-            opts['extractor_args'] = {}
+        else:
+            opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+
+        if self.cookies_file and os.path.exists(self.cookies_file):
+            opts['cookiefile'] = self.cookies_file
 
         return opts
 
@@ -155,16 +158,14 @@ class TopFlowCrawler:
         opts = self._get_opts(video_url)
         platform = self._detect_platform(video_url)
         print(f"🔍 开始抓取视频: platform={platform}, url={video_url}")
-        print(f"   代理: {opts.get('proxy', '无')}, format={opts.get('format', 'default')}")
+        print(f"   cookies: {opts.get('cookiefile', '无')}, player_client: {opts.get('extractor_args', {}).get('youtube', {}).get('player_client', 'default')}")
 
         def _do_extract():
             with yt_dlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(video_url, download=False)
 
-        try:
-            info = self._retry_with_backoff(_do_extract, max_retries=3, url=video_url)
-
-            result = {
+        def _build_result(info):
+            return {
                 "influencer_name": info.get('uploader') or info.get('channel', ''),
                 "video_title": info.get('title', ''),
                 "publish_date": info.get('upload_date', ''),
@@ -175,7 +176,12 @@ class TopFlowCrawler:
                 "platform": platform,
                 "video_url": video_url
             }
+
+        try:
+            info = self._retry_with_backoff(_do_extract, max_retries=3, url=video_url)
+            result = _build_result(info)
             print(f"✅ 抓取成功: {result.get('influencer_name', 'N/A')} - 播放:{result.get('play_count', 0)}")
+            self.last_error = None
             return result
 
         except Exception as e:
@@ -185,6 +191,48 @@ class TopFlowCrawler:
             print(f"  URL: {video_url}")
             print(f"  原因: {error_str[:300]}")
 
+            if 'sign in' in error_str.lower() or 'bot' in error_str.lower():
+                print("\n💡 被识别为机器人，尝试使用ios客户端重试...")
+                try:
+                    ios_opts = dict(self._base_opts)
+                    ios_opts.update({
+                        'extract_flat': False,
+                        'extractor_args': {
+                            'youtube': {
+                                'player_client': ['ios'],
+                            }
+                        },
+                    })
+                    if self.cookies_file and os.path.exists(self.cookies_file):
+                        ios_opts['cookiefile'] = self.cookies_file
+                    with yt_dlp.YoutubeDL(ios_opts) as ydl:
+                        info = ydl.extract_info(video_url, download=False)
+                    result = _build_result(info)
+                    print(f"✅ ios客户端抓取成功: {result.get('influencer_name', 'N/A')}")
+                    self.last_error = None
+                    return result
+                except Exception as e2:
+                    self.last_error = str(e2)
+                    print(f"  ios客户端也失败: {str(e2)[:200]}")
+
+                if self.cookies_file and os.path.exists(self.cookies_file):
+                    print(f"\n💡 使用cookies重试...")
+                    try:
+                        cookie_opts = dict(self._base_opts)
+                        cookie_opts.update({
+                            'extract_flat': False,
+                            'cookiefile': self.cookies_file,
+                        })
+                        with yt_dlp.YoutubeDL(cookie_opts) as ydl:
+                            info = ydl.extract_info(video_url, download=False)
+                        result = _build_result(info)
+                        print(f"✅ cookies抓取成功: {result.get('influencer_name', 'N/A')}")
+                        self.last_error = None
+                        return result
+                    except Exception as e3:
+                        self.last_error = str(e3)
+                        print(f"  cookies重试也失败: {str(e3)[:200]}")
+
             if 'format' in error_str.lower():
                 print("\n💡 格式不可用，尝试使用更宽松的格式选项...")
                 try:
@@ -192,26 +240,13 @@ class TopFlowCrawler:
                     fallback_opts['format'] = 'worst/worstvideo+worstaudio/best'
                     with yt_dlp.YoutubeDL(fallback_opts) as ydl:
                         info = ydl.extract_info(video_url, download=False)
-                    result = {
-                        "influencer_name": info.get('uploader') or info.get('channel', ''),
-                        "video_title": info.get('title', ''),
-                        "publish_date": info.get('upload_date', ''),
-                        "play_count": info.get('view_count', 0),
-                        "like_count": info.get('like_count', 0),
-                        "comment_count": info.get('comment_count', 0),
-                        "share_count": info.get('repost_count', 0),
-                        "platform": platform,
-                        "video_url": video_url
-                    }
+                    result = _build_result(info)
                     print(f"✅ 回退抓取成功: {result.get('influencer_name', 'N/A')}")
                     self.last_error = None
                     return result
                 except Exception as e2:
                     self.last_error = str(e2)
                     print(f"  回退也失败: {str(e2)[:200]}")
-
-            if any(keyword in error_str.lower() for keyword in ['ssl', 'certificate', 'eof', 'remote end']):
-                print("\n💡 建议: 稍后重试或检查网络连接")
 
             return None
 

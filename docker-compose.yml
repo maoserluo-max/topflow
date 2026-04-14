@@ -9,6 +9,7 @@ services:
       - "8000:8000"
     volumes:
       - topflow-data:/app/data:rw
+      - ./youtube-cookies.txt:/app/data/youtube-cookies.txt:ro
     environment:
       - DATABASE_URL=sqlite:////app/data/topflow.db
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production-2024}
