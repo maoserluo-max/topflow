@@ -7,6 +7,7 @@ import random
 class TopFlowCrawler:
     def __init__(self, proxy: str = None):
         self.proxy = proxy
+        self.last_error = None
         self._base_opts = {
             'quiet': True,
             'no_warnings': True,
@@ -179,6 +180,7 @@ class TopFlowCrawler:
 
         except Exception as e:
             error_str = str(e)
+            self.last_error = error_str
             print(f"\n[爬虫错误] 视频数据抓取失败")
             print(f"  URL: {video_url}")
             print(f"  原因: {error_str[:300]}")
@@ -202,8 +204,10 @@ class TopFlowCrawler:
                         "video_url": video_url
                     }
                     print(f"✅ 回退抓取成功: {result.get('influencer_name', 'N/A')}")
+                    self.last_error = None
                     return result
                 except Exception as e2:
+                    self.last_error = str(e2)
                     print(f"  回退也失败: {str(e2)[:200]}")
 
             if any(keyword in error_str.lower() for keyword in ['ssl', 'certificate', 'eof', 'remote end']):

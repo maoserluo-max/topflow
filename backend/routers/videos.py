@@ -307,7 +307,10 @@ async def fetch_metadata(
     try:
         data = await asyncio.to_thread(crawler.extract_video, request.url)
         if not data:
-            print(f"❌ 抓取返回空数据: {request.url}")
+            last_err = getattr(crawler, 'last_error', None) or ''
+            print(f"❌ 抓取返回空数据: {request.url}, 错误: {last_err[:300]}")
+            if last_err:
+                raise HTTPException(status_code=400, detail=f"抓取失败: {last_err[:200]}")
             raise HTTPException(status_code=400, detail="无法获取视频数据，请检查链接是否正确或稍后重试")
 
         log = OperationLog(
@@ -326,21 +329,7 @@ async def fetch_metadata(
     except Exception as e:
         error_msg = str(e)
         print(f"❌ 抓取异常: {request.url} -> {error_msg[:300]}")
-        if 'Sign in' in error_msg or 'sign in' in error_msg.lower():
-            detail = "YouTube需要登录验证，暂无法获取数据，请手动填写"
-        elif 'bot' in error_msg.lower():
-            detail = "被识别为机器人请求，请稍后重试或手动填写数据"
-        elif 'timeout' in error_msg.lower() or 'timed out' in error_msg.lower():
-            detail = "请求超时，请检查网络连接或稍后重试"
-        elif 'format' in error_msg.lower():
-            detail = "视频格式不可用，请稍后重试或手动填写数据"
-        elif 'unable to resolve' in error_msg.lower() or 'name or service not known' in error_msg.lower():
-            detail = "无法连接到视频平台（DNS解析失败），请检查服务器网络或配置代理"
-        elif 'connectionrefused' in error_msg.lower() or 'connection refused' in error_msg.lower():
-            detail = "无法连接到视频平台，请检查服务器网络或配置代理"
-        else:
-            detail = f"获取视频数据失败: {error_msg[:150]}"
-        raise HTTPException(status_code=500, detail=detail)
+        raise HTTPException(status_code=500, detail=f"获取视频数据失败: {error_msg[:200]}")
 
 
 @router.get("/dashboard/stats", response_model=DashboardStats)

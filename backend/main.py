@@ -87,3 +87,35 @@ def root():
 def health_check():
     from datetime import datetime, timezone
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+@app.get("/api/crawler-diagnose")
+def crawler_diagnose():
+    import yt_dlp
+    import platform
+    result = {
+        "yt_dlp_version": yt_dlp.version.__version__,
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
+    }
+    try:
+        opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'skip_download': True,
+            'nocheckcertificate': True,
+            'socket_timeout': 15,
+            'format': 'worst',
+        }
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info('https://www.youtube.com/shorts/U9QPM3C9n7g', download=False)
+        result["test_result"] = "success"
+        result["test_video"] = {
+            "title": info.get('title', ''),
+            "uploader": info.get('uploader', ''),
+            "view_count": info.get('view_count', 0),
+        }
+    except Exception as e:
+        result["test_result"] = "failed"
+        result["test_error"] = str(e)[:500]
+    return result
