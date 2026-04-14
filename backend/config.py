@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "顶流 TopFlow - 达人营销管理系统"
     APP_VERSION: str = "1.0.0"
     
-    DATABASE_URL: str = "sqlite:///./data/topflow.db"
+    DATABASE_URL: str = "sqlite:////app/data/topflow.db"
     SECRET_KEY: str = "topflow-secret-key-2024-change-me"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     
     class Config:
         env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
 settings = Settings()
@@ -23,3 +24,5 @@ settings = Settings()
 if len(settings.SECRET_KEY) > 72:
     print(f"⚠️  WARNING: SECRET_KEY过长({len(settings.SECRET_KEY)}字符)，已自动截断至72字符")
     settings.SECRET_KEY = settings.SECRET_KEY[:72]
+
+print(f"📂 DATABASE_URL = {settings.DATABASE_URL}")

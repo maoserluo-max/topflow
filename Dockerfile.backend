@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 COPY backend/ ./
 COPY crawler.py .
 
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data && chmod 777 /app/data
 
 EXPOSE 8000
 

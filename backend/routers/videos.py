@@ -24,8 +24,11 @@ def preview_video_code(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    code = generate_video_code(db, region, content_direction, publish_date)
-    return {"video_code": code}
+    try:
+        code = generate_video_code(db, region, content_direction, publish_date)
+        return {"video_code": code}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"生成编号失败: {str(e)}")
 
 
 @router.post("/", response_model=VideoResponse)

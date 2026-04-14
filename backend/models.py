@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Float, Boolean, ForeignKey, Enum as SQLEnum
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Float, Boolean, ForeignKey, Enum as SQLEnum, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime, timezone
@@ -80,6 +80,10 @@ class OperationLog(Base):
 def get_database_url():
     from config import settings
     url = settings.DATABASE_URL
+    if url.startswith("sqlite:////"):
+        data_dir = os.path.dirname(url.replace("sqlite:////", "/"))
+        os.makedirs(data_dir, exist_ok=True)
+        return url
     if url.startswith("sqlite:///./"):
         base_dir = os.path.dirname(os.path.abspath(__file__))
         rel_path = url[len("sqlite:///./"):]
@@ -87,6 +91,11 @@ def get_database_url():
         data_dir = os.path.dirname(abs_path)
         os.makedirs(data_dir, exist_ok=True)
         return f"sqlite:///{abs_path}"
+    if url.startswith("sqlite:///") and not url.startswith("sqlite:////"):
+        abs_path = url.replace("sqlite:///", "/")
+        data_dir = os.path.dirname(abs_path)
+        os.makedirs(data_dir, exist_ok=True)
+        return url
     return url
 
 
@@ -140,4 +149,14 @@ def generate_video_code(db, region, content_direction, publish_date=None):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+
+    with engine.connect() as conn:
+        result = conn.execute(text("PRAGMA table_info(videos)"))
+        existing_columns = {row[1] for row in result}
+        if 'video_code' not in existing_columns:
+            conn.execute(text("ALTER TABLE videos ADD COLUMN video_code VARCHAR(20)"))
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_videos_video_code ON videos (video_code)"))
+            conn.commit()
+            print("✅ 已添加 video_code 列")
+
     print(f"✅ 数据库已初始化: {DATABASE_URL}")

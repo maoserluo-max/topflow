@@ -11,9 +11,24 @@ from routers import auth, videos, admin
 async def lifespan(app: FastAPI):
     print("🚀 正在初始化数据库...")
     init_db()
+    verify_database_location()
     create_default_admin()
     print("✅ 系统启动完成！")
     yield
+
+
+def verify_database_location():
+    from models import DATABASE_URL
+    import os
+    if DATABASE_URL.startswith("sqlite:///"):
+        db_path = DATABASE_URL.replace("sqlite:///", "/")
+        if os.path.exists(db_path):
+            size = os.path.getsize(db_path)
+            print(f"✅ 数据库文件: {db_path} (大小: {size} bytes)")
+        else:
+            print(f"⚠️  数据库文件不存在: {db_path} (将在首次写入时创建)")
+        mount_check = os.stat(os.path.dirname(db_path) or "/app/data")
+        print(f"📂 数据目录: {os.path.dirname(db_path) or '/app/data'}")
 
 
 def create_default_admin():
