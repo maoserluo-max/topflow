@@ -1,272 +1,552 @@
 <template>
-  <div class="videos-page">
-    <el-card shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span>视频管理</span>
-          <div class="header-actions">
-            <el-button type="primary" @click="showCreateDialog">新增视频</el-button>
+  <div class="min-h-screen p-8 space-y-8">
+    <!-- 页面标题区 -->
+    <div class="flex items-center justify-between">
+      <div class="space-y-1">
+        <h1 class="text-4xl font-bold gradient-text">视频管理</h1>
+        <p class="text-gray-400 text-sm">管理所有达人视频数据，支持自动抓取元数据</p>
+      </div>
+      <button @click="showCreateDialog" class="cyber-button flex items-center gap-2 text-sm font-medium">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        新增视频
+      </button>
+    </div>
+
+    <!-- 筛选栏 - 玻璃拟态 -->
+    <div class="glass-card p-6 animate-in">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-blue to-cyber-purple"></span>
+        <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">筛选条件</h3>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        <!-- 平台 -->
+        <div class="space-y-1.5">
+          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">平台</label>
+          <select
+            v-model="filters.platform"
+            class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+          >
+            <option value="" class="bg-gray-900">全部平台</option>
+            <option value="tiktok" class="bg-gray-900">TikTok</option>
+            <option value="ins" class="bg-gray-900">Instagram</option>
+            <option value="youtube" class="bg-gray-900">YouTube</option>
+          </select>
+        </div>
+
+        <!-- 地区 -->
+        <div class="space-y-1.5">
+          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">地区</label>
+          <select
+            v-model="filters.region"
+            class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+          >
+            <option value="" class="bg-gray-900">全部地区</option>
+            <option v-for="r in regionOptions" :key="r.value" :value="r.value" class="bg-gray-900">{{ r.label }}</option>
+          </select>
+        </div>
+
+        <!-- 达人名称 -->
+        <div class="space-y-1.5">
+          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">达人</label>
+          <input
+            v-model="filters.influencer_name"
+            type="text"
+            placeholder="搜索达人..."
+            class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+          />
+        </div>
+
+        <!-- 状态 -->
+        <div class="space-y-1.5">
+          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">状态</label>
+          <select
+            v-model="filters.status"
+            class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+          >
+            <option value="" class="bg-gray-900">全部状态</option>
+            <option v-for="s in statusOptions" :key="s.value" :value="s.value" class="bg-gray-900">{{ s.label }}</option>
+          </select>
+        </div>
+
+        <!-- 日期范围 -->
+        <div class="space-y-1.5 lg:col-span-2">
+          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">发布日期</label>
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            class="!w-full !bg-white/5 !border-white/10 !rounded-xl"
+          />
+        </div>
+      </div>
+
+      <!-- 操作按钮 -->
+      <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-white/5">
+        <button
+          @click="resetFilters"
+          class="px-5 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-200"
+        >
+          重置筛选
+        </button>
+        <button
+          @click="fetchVideos"
+          class="px-6 py-2 rounded-xl text-sm font-medium bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 transition-all duration-200"
+        >
+          搜索数据
+        </button>
+      </div>
+    </div>
+
+    <!-- 数据表格 - 现代设计 -->
+    <div class="glass-card overflow-hidden animate-in" style="animation-delay: 100ms">
+      <div v-if="loading" class="flex items-center justify-center py-20">
+        <div class="space-y-4 text-center">
+          <div class="w-12 h-12 mx-auto border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin"></div>
+          <p class="text-gray-400 text-sm">加载数据中...</p>
+        </div>
+      </div>
+
+      <div v-else class="overflow-x-auto scrollbar-hide">
+        <table class="data-table-modern">
+          <thead>
+            <tr>
+              <th>平台</th>
+              <th>地区</th>
+              <th>达人</th>
+              <th>标题</th>
+              <th class="text-right">价格($)</th>
+              <th>发布日期</th>
+              <th class="text-right">播放量</th>
+              <th class="text-right">点赞数</th>
+              <th>状态</th>
+              <th class="text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(video, index) in videos" :key="video.id" class="group animate-in" :style="{ animationDelay: `${index * 50}ms` }">
+              <td>
+                <span
+                  class="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold tracking-wide"
+                  :class="getPlatformClass(video.platform)"
+                >
+                  {{ video.platform?.toUpperCase() }}
+                </span>
+              </td>
+              <td class="font-mono text-xs text-gray-400">{{ getRegionName(video.region) }}</td>
+              <td class="font-medium text-white">{{ video.influencer_name }}</td>
+              <td class="max-w-[200px] truncate text-gray-400">{{ video.title || '-' }}</td>
+              <td class="text-right font-mono text-cyber-green font-semibold">${{ video.price_usd || '0' }}</td>
+              <td class="text-sm text-gray-500 whitespace-nowrap">{{ formatDate(video.publish_date) }}</td>
+              <td class="text-right font-mono text-cyber-blue">{{ formatNumber(video.play_count) }}</td>
+              <td class="text-right font-mono text-pink-400">{{ formatNumber(video.like_count) }}</td>
+              <td>
+                <span
+                  class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium"
+                  :class="getStatusClass(video.status)"
+                >
+                  {{ getStatusName(video.status) }}
+                </span>
+              </td>
+              <td>
+                <div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <button
+                    @click="editVideo(video)"
+                    class="p-1.5 rounded-lg hover:bg-cyber-blue/10 text-cyber-blue transition-colors"
+                    title="编辑"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button
+                    @click="deleteVideo(video)"
+                    class="p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors"
+                    title="删除"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                  <button
+                    v-if="video.video_url"
+                    @click="openVideo(video.video_url)"
+                    class="p-1.5 rounded-lg hover:bg-cyber-purple/10 text-cyber-purple transition-colors"
+                    title="查看"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="videos.length === 0">
+              <td colspan="10" class="text-center py-20">
+                <div class="space-y-3">
+                  <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary-500/10 to-cyber-purple/10 flex items-center justify-center">
+                    <svg class="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <p class="text-gray-500 text-sm">暂无视频数据</p>
+                  <button @click="showCreateDialog" class="cyber-button text-sm px-4 py-2">
+                    添加第一条视频
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 分页器 -->
+      <div v-if="total > 0" class="flex items-center justify-between px-6 py-4 border-t border-white/5">
+        <div class="text-sm text-gray-500">
+          共 <span class="text-white font-semibold">{{ total }}</span> 条记录
+        </div>
+        <div class="flex items-center gap-4">
+          <select
+            v-model="pageSize"
+            @change="fetchVideos"
+            class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 focus:outline-none focus:border-cyber-blue/50"
+          >
+            <option :value="10" class="bg-gray-900">10条/页</option>
+            <option :value="20" class="bg-gray-900">20条/页</option>
+            <option :value="50" class="bg-gray-900">50条/页</option>
+            <option :value="100" class="bg-gray-900">100条/页</option>
+          </select>
+          <div class="flex items-center gap-2">
+            <button
+              @click="currentPage > 1 && (currentPage--, fetchVideos())"
+              :disabled="currentPage === 1"
+              class="p-2 rounded-lg hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <span class="text-sm text-gray-400 min-w-[80px] text-center">
+              第 <span class="text-white font-medium">{{ currentPage }}</span> / {{ Math.ceil(total / pageSize) }} 页
+            </span>
+            <button
+              @click="currentPage < Math.ceil(total / pageSize) && (currentPage++, fetchVideos())"
+              :disabled="currentPage >= Math.ceil(total / pageSize)"
+              class="p-2 rounded-lg hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         </div>
-      </template>
-
-      <div class="filter-bar">
-        <el-form :inline="true" :model="filters">
-          <el-form-item label="平台">
-            <el-select v-model="filters.platform" placeholder="选择平台" clearable style="width: 120px;">
-              <el-option label="TikTok" value="tiktok" />
-              <el-option label="Instagram" value="ins" />
-              <el-option label="YouTube" value="youtube" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="地区">
-            <el-select v-model="filters.region" placeholder="选择地区" clearable style="width: 120px;">
-              <el-option v-for="r in regionOptions" :key="r.value" :label="r.label" :value="r.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="达人">
-            <el-input v-model="filters.influencer_name" placeholder="输入达人名称" clearable style="width: 150px;" />
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-select v-model="filters.status" placeholder="选择状态" clearable style="width: 120px;">
-              <el-option v-for="s in statusOptions" :key="s.value" :label="s.label" :value="s.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="发布日期">
-            <el-date-picker
-              v-model="dateRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              format="YYYY-MM-DD"
-              value-format="YYYY-MM-DD"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="fetchVideos">搜索</el-button>
-            <el-button @click="resetFilters">重置</el-button>
-          </el-form-item>
-        </el-form>
       </div>
+    </div>
 
-      <el-table :data="videos" v-loading="loading" stripe border>
-        <el-table-column prop="platform" label="平台" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getPlatformType(row.platform)" size="small">{{ row.platform.toUpperCase() }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="region" label="地区" width="80">
-          <template #default="{ row }">{{ getRegionName(row.region) }}</template>
-        </el-table-column>
-        <el-table-column prop="influencer_name" label="达人" width="130" />
-        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="price_usd" label="价格($)" width="90" align="right">
-          <template #default="{ row }">{{ row.price_usd || '-' }}</template>
-        </el-table-column>
-        <el-table-column prop="publish_date" label="发布日期" width="110">
-          <template #default="{ row }">{{ formatDate(row.publish_date) }}</template>
-        </el-table-column>
-        <el-table-column prop="play_count" label="播放量" width="100" align="right">
-          <template #default="{ row }">{{ formatNumber(row.play_count) }}</template>
-        </el-table-column>
-        <el-table-column prop="like_count" label="点赞数" width="90" align="right">
-          <template #default="{ row }">{{ formatNumber(row.like_count) }}</template>
-        </el-table-column>
-        <el-table-column prop="comment_count" label="评论数" width="90" align="right">
-          <template #default="{ row }">{{ formatNumber(row.comment_count) }}</template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" size="small">{{ getStatusName(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="editVideo(row)">编辑</el-button>
-            <el-button type="danger" link size="small" @click="deleteVideo(row)">删除</el-button>
-            <el-button v-if="row.video_url" type="success" link size="small" @click="openVideo(row.video_url)">
-              查看
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+    <!-- 新增/编辑对话框 - 全屏模态 -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="dialogVisible" class="fixed inset-0 z-50 overflow-y-auto" @click.self="dialogVisible = false">
+          <!-- 背景遮罩 -->
+          <div class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" />
 
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :total="total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="fetchVideos"
-          @current-change="fetchVideos"
-        />
-      </div>
-    </el-card>
-
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑视频' : '新增视频'" width="750px">
-      <el-alert 
-        v-if="!isEdit" 
-        title="提示：可粘贴视频链接并点击「抓取数据」自动填充信息，也可手动填写所有字段" 
-        type="info" 
-        :closable="false" 
-        show-icon 
-        style="margin-bottom: 20px;" 
-      />
-
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
-
-        <el-divider content-position="left">视频链接（可选）</el-divider>
-
-        <el-row :gutter="20">
-          <el-col :span="18">
-            <el-form-item label="视频链接">
-              <el-input v-model="form.video_url" placeholder="粘贴TikTok/Instagram/YouTube视频链接" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item label=" " :label-width="'20px'">
-              <el-button type="success" :loading="fetching" @click="fetchMetadataInDialog" :disabled="!form.video_url">
-                抓取数据
-              </el-button>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-divider content-position="left">基本信息</el-divider>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="平台" prop="platform">
-              <el-select v-model="form.platform" placeholder="选择平台" style="width: 100%;">
-                <el-option label="TikTok" value="tiktok" />
-                <el-option label="Instagram" value="ins" />
-                <el-option label="YouTube" value="youtube" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="地区" prop="region">
-              <el-select v-model="form.region" placeholder="选择地区" style="width: 100%;">
-                <el-option v-for="r in regionOptions" :key="r.value" :label="r.label" :value="r.value" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="达人名称" prop="influencer_name">
-              <el-input v-model="form.influencer_name" placeholder="输入达人名称" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="内容方向" prop="content_direction">
-              <el-select v-model="form.content_direction" placeholder="选择内容方向" style="width: 100%;">
-                <el-option v-for="d in directionOptions" :key="d.value" :label="d.label" :value="d.value" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="合作价格($)" prop="price_usd">
-              <el-input-number v-model="form.price_usd" :min="0" :precision="2" style="width: 100%;" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="对接人" prop="contact_person">
-              <el-select 
-                v-if="canSelectAllUsers" 
-                v-model="form.contact_person" 
-                placeholder="选择对接人" 
-                filterable 
-                style="width: 100%;"
+          <!-- 对话框内容 -->
+          <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div class="relative w-full max-w-4xl glass-card p-8 animate-slide-up max-h-[90vh] overflow-y-auto scrollbar-hide">
+              <!-- 关闭按钮 -->
+              <button
+                @click="dialogVisible = false"
+                class="absolute top-6 right-6 p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
               >
-                <el-option v-for="u in userList" :key="u.username" :label="u.full_name || u.username" :value="u.username" />
-              </el-select>
-              <el-input v-else v-model="form.contact_person" disabled :placeholder-value="currentUser" />
-            </el-form-item>
-          </el-col>
-        </el-row>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
 
-        <el-form-item label="标题" prop="title">
-          <el-input v-model="form.title" type="textarea" :rows="2" placeholder="输入视频标题" />
-        </el-form-item>
+              <!-- 标题 -->
+              <div class="mb-8">
+                <h2 class="text-2xl font-bold gradient-text mb-2">
+                  {{ isEdit ? '编辑视频' : '新增视频' }}
+                </h2>
+                <p v-if="!isEdit" class="text-sm text-gray-400 flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyber-blue animate-pulse"></span>
+                  可粘贴链接并点击「抓取数据」自动填充信息
+                </p>
+              </div>
 
-        <el-divider content-position="left">发布与状态</el-divider>
+              <!-- 表单 -->
+              <form @submit.prevent="handleSubmit" class="space-y-8">
+                <!-- 视频链接区域 -->
+                <div class="space-y-4">
+                  <div class="flex items-center gap-3">
+                    <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-blue to-cyber-purple"></span>
+                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">视频链接（可选）</h3>
+                  </div>
+                  <div class="flex gap-3">
+                    <input
+                      v-model="form.video_url"
+                      type="url"
+                      placeholder="粘贴 TikTok / Instagram / YouTube 链接..."
+                      class="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+                    />
+                    <button
+                      type="button"
+                      @click="fetchMetadataInDialog"
+                      :disabled="!form.video_url?.trim()"
+                      class="px-6 py-3 rounded-xl font-medium bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 whitespace-nowrap"
+                    >
+                      <svg v-if="!fetching" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <svg v-else class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      {{ fetching ? '抓取中...' : '抓取数据' }}
+                    </button>
+                  </div>
+                </div>
 
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="发布日期" prop="publish_date">
-              <el-date-picker 
-                v-model="form.publish_date" 
-                type="date" 
-                placeholder="选择日期" 
-                format="YYYY-MM-DD" 
-                value-format="YYYY-MM-DD"
-                style="width: 100%;" 
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="状态" prop="status">
-              <el-select v-model="form.status" placeholder="选择状态" style="width: 100%;">
-                <el-option v-for="s in statusOptions" :key="s.value" :label="s.label" :value="s.value" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
+                <!-- 基本信息 -->
+                <div class="space-y-4">
+                  <div class="flex items-center gap-3">
+                    <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-purple to-pink-500"></span>
+                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">基本信息</h3>
+                  </div>
 
-        <el-divider content-position="left">数据统计（自动获取或手动填写）</el-divider>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">平台 *</label>
+                      <select
+                        v-model="form.platform"
+                        required
+                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all"
+                      >
+                        <option value="tiktok" class="bg-gray-900">TikTok</option>
+                        <option value="ins" class="bg-gray-900">Instagram</option>
+                        <option value="youtube" class="bg-gray-900">YouTube</option>
+                      </select>
+                    </div>
 
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item label="播放量">
-              <el-input-number v-model="form.play_count" :min="0" style="width: 100%;" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="点赞数">
-              <el-input-number v-model="form.like_count" :min="0" style="width: 100%;" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="评论数">
-              <el-input-number v-model="form.comment_count" :min="0" style="width: 100%;" />
-            </el-form-item>
-          </el-col>
-        </el-row>
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">地区</label>
+                      <select
+                        v-model="form.region"
+                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all"
+                      >
+                        <option value="" class="bg-gray-900">选择地区</option>
+                        <option v-for="r in regionOptions" :key="r.value" :value="r.value" class="bg-gray-900">{{ r.label }}</option>
+                      </select>
+                    </div>
 
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item label="分享数">
-              <el-input-number v-model="form.share_count" :min="0" style="width: 100%;" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="16">
-            <el-form-item label="邮箱">
-              <el-input v-model="form.contact_email" placeholder="联系邮箱地址" />
-            </el-form-item>
-          </el-col>
-        </el-row>
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">达人名称 *</label>
+                      <input
+                        v-model="form.influencer_name"
+                        type="text"
+                        required
+                        placeholder="输入达人名称"
+                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all"
+                      />
+                    </div>
 
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="WhatsApp">
-              <el-input v-model="form.contact_whatsapp" placeholder="WhatsApp号码" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">内容方向</label>
+                      <select
+                        v-model="form.content_direction"
+                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all"
+                      >
+                        <option value="" class="bg-gray-900">选择方向</option>
+                        <option v-for="d in directionOptions" :key="d.value" :value="d.value" class="bg-gray-900">{{ d.label }}</option>
+                      </select>
+                    </div>
 
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
-      </template>
-    </el-dialog>
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">合作价格 ($)</label>
+                      <input
+                        v-model.number="form.price_usd"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all"
+                      />
+                    </div>
+
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">对接人</label>
+                      <select
+                        v-if="canSelectAllUsers"
+                        v-model="form.contact_person"
+                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all"
+                      >
+                        <option value="" class="bg-gray-900">选择对接人</option>
+                        <option v-for="u in userList" :key="u.username" :value="u.username" class="bg-gray-900">{{ u.full_name || u.username }}</option>
+                      </select>
+                      <input
+                        v-else
+                        :value="currentUser"
+                        type="text"
+                        disabled
+                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-500 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="space-y-1.5">
+                    <label class="text-xs text-gray-500 font-medium">标题</label>
+                    <textarea
+                      v-model="form.title"
+                      rows="2"
+                      placeholder="输入视频标题"
+                      class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all resize-none"
+                    ></textarea>
+                  </div>
+                </div>
+
+                <!-- 发布与状态 -->
+                <div class="space-y-4">
+                  <div class="flex items-center gap-3">
+                    <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-orange-500 to-yellow-500"></span>
+                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">发布与状态</h3>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">发布日期</label>
+                      <input
+                        v-model="form.publish_date"
+                        type="date"
+                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-orange-500/50 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all"
+                      />
+                    </div>
+
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">状态</label>
+                      <select
+                        v-model="form.status"
+                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-orange-500/50 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all"
+                      >
+                        <option v-for="s in statusOptions" :key="s.value" :value="s.value" class="bg-gray-900">{{ s.label }}</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 数据统计 -->
+                <div class="space-y-4">
+                  <div class="flex items-center gap-3">
+                    <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-emerald-500 to-teal-500"></span>
+                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">数据统计</h3>
+                    <span class="text-xs text-gray-600">(自动获取或手动填写)</span>
+                  </div>
+
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">播放量</label>
+                      <input
+                        v-model.number="form.play_count"
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                      />
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">点赞数</label>
+                      <input
+                        v-model.number="form.like_count"
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                      />
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">评论数</label>
+                      <input
+                        v-model.number="form.comment_count"
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                      />
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">分享数</label>
+                      <input
+                        v-model.number="form.share_count"
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 联系方式 -->
+                <div class="space-y-4">
+                  <div class="flex items-center gap-3">
+                    <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-pink-500 to-rose-500"></span>
+                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">联系方式</h3>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">邮箱</label>
+                      <input
+                        v-model="form.contact_email"
+                        type="email"
+                        placeholder="联系邮箱地址"
+                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all"
+                      />
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="text-xs text-gray-500 font-medium">WhatsApp</label>
+                      <input
+                        v-model="form.contact_whatsapp"
+                        type="tel"
+                        placeholder="WhatsApp号码"
+                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <div class="flex justify-end gap-4 pt-6 border-t border-white/5">
+                  <button
+                    type="button"
+                    @click="dialogVisible = false"
+                    class="px-8 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-200"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    :disabled="submitting"
+                    class="px-8 py-3 rounded-xl text-sm font-medium bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
+                  >
+                    <svg v-if="submitting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {{ submitting ? '提交中...' : (isEdit ? '保存修改' : '创建视频') }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -564,30 +844,50 @@ function getRegionName(region) {
   const found = regionOptions.find(r => r.value === region)
   return found ? found.label : region || '-'
 }
+
+function getPlatformClass(platform) {
+  const classes = {
+    tiktok: 'bg-black/40 text-gray-200 border border-white/20',
+    ins: 'bg-pink-500/10 text-pink-400 border border-pink-500/30',
+    youtube: 'bg-red-500/10 text-red-400 border border-red-500/30'
+  }
+  return classes[platform] || 'bg-gray-500/10 text-gray-300 border border-gray-500/30'
+}
+
+function getStatusClass(status) {
+  const classes = {
+    pending_review: 'bg-blue-500/10 text-blue-400 border border-blue-500/30',
+    pending_publish: 'bg-amber-500/10 text-amber-400 border border-amber-500/30',
+    published: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
+    completed: 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+  }
+  return classes[status] || 'bg-gray-500/10 text-gray-400 border border-gray-500/30'
+}
 </script>
 
 <style scoped>
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
 }
 
-.header-actions {
-  display: flex;
-  gap: 10px;
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
 }
 
-.filter-bar {
-  margin-bottom: 20px;
-  padding: 15px;
-  background: #fafafa;
-  border-radius: 4px;
+.modal-enter-active .glass-card,
+.modal-leave-active .glass-card {
+  transition: all 0.3s ease;
 }
 
-.pagination-wrapper {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
+.modal-enter-from .glass-card {
+  transform: scale(0.95) translateY(20px);
+  opacity: 0;
+}
+
+.modal-leave-to .glass-card {
+  transform: scale(0.95) translateY(20px);
+  opacity: 0;
 }
 </style>
