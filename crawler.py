@@ -152,6 +152,9 @@ class TopFlowCrawler:
     def extract_video(self, video_url: str) -> Optional[Dict]:
         self._rate_limit()
         opts = self._get_opts(video_url)
+        platform = self._detect_platform(video_url)
+        print(f"🔍 开始抓取视频: platform={platform}, url={video_url}")
+        print(f"   代理: {opts.get('proxy', '无')}, format={opts.get('format', 'default')}")
 
         def _do_extract():
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -160,7 +163,7 @@ class TopFlowCrawler:
         try:
             info = self._retry_with_backoff(_do_extract, max_retries=3, url=video_url)
 
-            return {
+            result = {
                 "influencer_name": info.get('uploader') or info.get('channel', ''),
                 "video_title": info.get('title', ''),
                 "publish_date": info.get('upload_date', ''),
@@ -168,15 +171,40 @@ class TopFlowCrawler:
                 "like_count": info.get('like_count', 0),
                 "comment_count": info.get('comment_count', 0),
                 "share_count": info.get('repost_count', 0),
-                "platform": self._detect_platform(video_url),
+                "platform": platform,
                 "video_url": video_url
             }
+            print(f"✅ 抓取成功: {result.get('influencer_name', 'N/A')} - 播放:{result.get('play_count', 0)}")
+            return result
 
         except Exception as e:
             error_str = str(e)
             print(f"\n[爬虫错误] 视频数据抓取失败")
             print(f"  URL: {video_url}")
-            print(f"  原因: {error_str[:200]}")
+            print(f"  原因: {error_str[:300]}")
+
+            if 'format' in error_str.lower():
+                print("\n💡 格式不可用，尝试使用更宽松的格式选项...")
+                try:
+                    fallback_opts = dict(opts)
+                    fallback_opts['format'] = 'worst/worstvideo+worstaudio/best'
+                    with yt_dlp.YoutubeDL(fallback_opts) as ydl:
+                        info = ydl.extract_info(video_url, download=False)
+                    result = {
+                        "influencer_name": info.get('uploader') or info.get('channel', ''),
+                        "video_title": info.get('title', ''),
+                        "publish_date": info.get('upload_date', ''),
+                        "play_count": info.get('view_count', 0),
+                        "like_count": info.get('like_count', 0),
+                        "comment_count": info.get('comment_count', 0),
+                        "share_count": info.get('repost_count', 0),
+                        "platform": platform,
+                        "video_url": video_url
+                    }
+                    print(f"✅ 回退抓取成功: {result.get('influencer_name', 'N/A')}")
+                    return result
+                except Exception as e2:
+                    print(f"  回退也失败: {str(e2)[:200]}")
 
             if any(keyword in error_str.lower() for keyword in ['ssl', 'certificate', 'eof', 'remote end']):
                 print("\n💡 建议: 稍后重试或检查网络连接")

@@ -32,8 +32,6 @@ api.interceptors.response.use(
       userStore.logout()
       router.push('/login')
       ElMessage.error('登录已过期，请重新登录')
-    } else if (error.response?.data?.detail) {
-      ElMessage.error(error.response.data.detail)
     }
     return Promise.reject(error)
   }

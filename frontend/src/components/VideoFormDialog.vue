@@ -416,7 +416,12 @@ async function fetchMetadata() {
     }
   } catch (error) {
     console.error('Fetch metadata error:', error)
-    ElMessage.warning('抓取失败，请手动填写数据')
+    const serverMsg = error?.response?.data?.detail
+    if (serverMsg) {
+      ElMessage.warning(serverMsg)
+    } else {
+      ElMessage.warning('抓取失败，请手动填写数据')
+    }
   } finally {
     fetching.value = false
   }
