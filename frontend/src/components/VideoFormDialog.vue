@@ -64,6 +64,29 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div class="space-y-1.5">
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">视频编号</label>
+                    <div class="flex gap-2">
+                      <input
+                        v-model="form.video_code"
+                        type="text"
+                        :placeholder="isEdit ? '手动输入编号' : '根据地区/方向/日期自动生成'"
+                        class="flex-1 px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all font-mono"
+                      />
+                      <button
+                        v-if="!isEdit"
+                        type="button"
+                        @click="refreshVideoCode"
+                        class="px-3 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white bg-white border border-gray-200 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-all"
+                        title="重新生成编号"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </button>
+                    </div>
+                    <p v-if="!isEdit && form.video_code" class="text-xs dark:text-gray-600 text-gray-400">可手动修改编号</p>
+                  </div>
+                  <div class="space-y-1.5">
                     <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">平台 *</label>
                     <select
                       v-model="form.platform"
@@ -277,6 +300,7 @@ const statusOptions = [
 ]
 
 const defaultForm = {
+  video_code: '',
   platform: 'tiktok',
   region: '',
   content_direction: '',
@@ -301,6 +325,7 @@ watch(() => props.visible, (val) => {
   if (val) {
     if (props.isEdit && props.editData) {
       Object.assign(form, {
+        video_code: props.editData.video_code || '',
         platform: props.editData.platform,
         region: props.editData.region,
         content_direction: props.editData.content_direction,
@@ -319,6 +344,7 @@ watch(() => props.visible, (val) => {
         status: props.editData.status
       })
     } else {
+      codeManuallyEdited = false
       Object.assign(form, {
         ...defaultForm,
         publish_date: new Date().toISOString().split('T')[0],
@@ -366,6 +392,14 @@ async function fetchMetadata() {
       comment_count: response.comment_count || 0,
       share_count: response.share_count || 0
     })
+    if (response.publish_date) {
+      const raw = String(response.publish_date)
+      if (/^\d{8}$/.test(raw)) {
+        form.publish_date = `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+      } else if (raw.length >= 10) {
+        form.publish_date = raw.slice(0, 10)
+      }
+    }
   } catch (error) {
     console.error('Fetch metadata error:', error)
     ElMessage.warning('抓取失败，请手动填写数据')
@@ -373,6 +407,51 @@ async function fetchMetadata() {
     fetching.value = false
   }
 }
+
+let codeManuallyEdited = false
+
+async function refreshVideoCode() {
+  if (!form.region || !form.content_direction || !form.publish_date) {
+    ElMessage.warning('请先选择地区、内容方向和发布日期')
+    return
+  }
+  codeManuallyEdited = false
+  try {
+    const resp = await api.get('/videos/generate-code', {
+      params: {
+        region: form.region,
+        content_direction: form.content_direction,
+        publish_date: form.publish_date
+      }
+    })
+    form.video_code = resp.video_code
+  } catch (e) {
+    console.error('Generate code error:', e)
+  }
+}
+
+watch(() => form.video_code, (newVal, oldVal) => {
+  if (oldVal === '' && newVal !== '') {
+    codeManuallyEdited = true
+  }
+})
+
+watch([() => form.region, () => form.content_direction, () => form.publish_date], async () => {
+  if (props.isEdit || codeManuallyEdited) return
+  if (!form.region || !form.content_direction || !form.publish_date) return
+  try {
+    const resp = await api.get('/videos/generate-code', {
+      params: {
+        region: form.region,
+        content_direction: form.content_direction,
+        publish_date: form.publish_date
+      }
+    })
+    form.video_code = resp.video_code
+  } catch (e) {
+    console.error('Generate code error:', e)
+  }
+})
 </script>
 
 <style scoped>

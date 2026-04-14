@@ -79,6 +79,7 @@ class LoginRequest(BaseModel):
 
 
 class VideoBase(BaseModel):
+    video_code: Optional[str] = None
     platform: str
     region: Optional[str] = None
     content_direction: Optional[str] = None
@@ -135,6 +136,7 @@ class VideoCreate(VideoBase):
 
 
 class VideoUpdate(BaseModel):
+    video_code: Optional[str] = None
     platform: Optional[str] = None
     region: Optional[str] = None
     content_direction: Optional[str] = None

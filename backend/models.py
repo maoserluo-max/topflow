@@ -39,6 +39,7 @@ class Video(Base):
     __tablename__ = "videos"
 
     id = Column(Integer, primary_key=True, index=True)
+    video_code = Column(String(20), unique=True, index=True)
     platform = Column(String(20), nullable=False)
     region = Column(String(50))
     content_direction = Column(String(100))
@@ -100,6 +101,41 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def generate_video_code(db, region, content_direction, publish_date=None):
+    region_part = (region or "XX").upper()[:2]
+    direction_part = (content_direction or "XX").upper()[:2]
+
+    if publish_date:
+        if isinstance(publish_date, str):
+            from datetime import datetime as _dt
+            try:
+                pd = _dt.strptime(publish_date[:10], "%Y-%m-%d")
+            except ValueError:
+                pd = _dt.now()
+        else:
+            pd = publish_date
+        date_part = pd.strftime("%m%d")
+    else:
+        from datetime import datetime as _dt
+        date_part = _dt.now().strftime("%m%d")
+
+    prefix = f"{region_part}{direction_part}{date_part}"
+
+    last_video = db.query(Video).filter(
+        Video.video_code.like(f"{prefix}%")
+    ).order_by(Video.id.desc()).first()
+
+    if last_video and last_video.video_code:
+        try:
+            seq = int(last_video.video_code[-2:]) + 1
+        except (ValueError, IndexError):
+            seq = 1
+    else:
+        seq = 1
+
+    return f"{prefix}{seq:02d}"
 
 
 def init_db():

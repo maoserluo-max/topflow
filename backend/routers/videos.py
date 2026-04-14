@@ -8,12 +8,24 @@ from typing import Optional
 from datetime import datetime
 import asyncio
 
-from models import get_db, Video, User, OperationLog, UserRole
+from models import get_db, Video, User, OperationLog, UserRole, generate_video_code
 from auth import get_current_user, get_current_manager_or_admin, get_current_admin
 from schemas import VideoCreate, VideoUpdate, VideoResponse, CrawlerRequest, DashboardStats
 
 router = APIRouter(prefix="/api/videos", tags=["视频管理"])
 crawler = TopFlowCrawler()
+
+
+@router.get("/generate-code")
+def preview_video_code(
+    region: Optional[str] = None,
+    content_direction: Optional[str] = None,
+    publish_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    code = generate_video_code(db, region, content_direction, publish_date)
+    return {"video_code": code}
 
 
 @router.post("/", response_model=VideoResponse)
@@ -23,6 +35,8 @@ def create_video(
     db: Session = Depends(get_db)
 ):
     new_video = Video(**video.dict(), creator_id=current_user.id)
+    if not new_video.video_code:
+        new_video.video_code = generate_video_code(db, video.region, video.content_direction, video.publish_date)
     db.add(new_video)
     db.commit()
     db.refresh(new_video)
@@ -46,6 +60,7 @@ def get_videos(
     platform: Optional[str] = None,
     region: Optional[str] = None,
     influencer_name: Optional[str] = None,
+    contact_person: Optional[str] = None,
     status: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -65,6 +80,8 @@ def get_videos(
         query = query.filter(Video.region.ilike(f"%{region}%"))
     if influencer_name:
         query = query.filter(Video.influencer_name.ilike(f"%{influencer_name}%"))
+    if contact_person:
+        query = query.filter(Video.contact_person.ilike(f"%{contact_person}%"))
     if status:
         query = query.filter(Video.status == status)
     if start_date:

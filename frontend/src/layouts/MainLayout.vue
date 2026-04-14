@@ -1,16 +1,19 @@
 <template>
   <div class="h-screen flex overflow-hidden transition-colors duration-300 dark:bg-gray-950 bg-gray-100">
-    <aside class="w-64 flex-shrink-0 flex flex-col backdrop-blur-xl relative transition-colors duration-300 dark:border-r dark:border-white/5 dark:bg-gray-950/95 border-r border-gray-200/80 bg-white/95">
+    <aside
+      class="flex-shrink-0 flex flex-col backdrop-blur-xl relative transition-all duration-300 dark:border-r dark:border-white/5 dark:bg-gray-950/95 border-r border-gray-200/80 bg-white/95"
+      :class="sidebarCollapsed ? 'w-[72px]' : 'w-64'"
+    >
       <div class="p-6 dark:border-b dark:border-white/5 border-b border-gray-200">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-cyber-purple flex items-center justify-center shadow-lg shadow-primary-500/30">
+          <div class="w-10 h-10 flex-shrink-0 rounded-xl bg-gradient-to-br from-primary-500 to-cyber-purple flex items-center justify-center shadow-lg shadow-primary-500/30">
             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <div>
-            <h1 class="text-lg font-bold gradient-text">TopFlow</h1>
-            <p class="text-[10px] uppercase tracking-widest dark:text-gray-500 text-gray-400">达人营销管理</p>
+          <div v-show="!sidebarCollapsed" class="overflow-hidden">
+            <h1 class="text-lg font-bold gradient-text whitespace-nowrap">TopFlow</h1>
+            <p class="text-[10px] uppercase tracking-widest dark:text-gray-500 text-gray-400 whitespace-nowrap">达人营销管理</p>
           </div>
         </div>
       </div>
@@ -21,18 +24,19 @@
           :key="item.path"
           :to="item.path"
           class="nav-item group"
-          :class="{ 'active': $route.path === item.path }"
+          :class="{ 'active': $route.path === item.path, 'justify-center': sidebarCollapsed }"
+          :title="sidebarCollapsed ? item.label : ''"
         >
-          <component :is="item.icon" class="w-5 h-5 transition-transform duration-200 group-hover:scale-110" />
-          <span>{{ item.label }}</span>
+          <component :is="item.icon" class="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+          <span v-show="!sidebarCollapsed">{{ item.label }}</span>
           <span
-            v-if="$route.path === item.path"
+            v-if="$route.path === item.path && !sidebarCollapsed"
             class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-gradient-to-b from-cyber-blue to-cyber-purple"
           ></span>
         </router-link>
       </nav>
 
-      <div class="p-4 dark:border-t dark:border-white/5 border-t border-gray-200">
+      <div v-show="!sidebarCollapsed" class="p-4 dark:border-t dark:border-white/5 border-t border-gray-200">
         <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl dark:bg-white/[0.02] bg-gray-100">
           <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
             <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,6 +56,15 @@
     <div class="flex-1 flex flex-col min-w-0">
       <header class="h-16 px-8 flex items-center justify-between backdrop-blur-xl sticky top-0 z-40 transition-colors duration-300 dark:border-b dark:border-white/5 dark:bg-gray-950/80 border-b border-gray-200 bg-white/90">
         <div class="flex items-center gap-4">
+          <button
+            @click="sidebarCollapsed = !sidebarCollapsed"
+            class="p-2 rounded-xl transition-all duration-200 dark:hover:bg-white/5 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white text-gray-400 hover:text-gray-700"
+            :title="sidebarCollapsed ? '展开菜单' : '收起菜单'"
+          >
+            <svg class="w-5 h-5 transition-transform duration-300" :class="sidebarCollapsed ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+          </button>
           <div class="flex items-center gap-2 text-sm">
             <router-link to="/" class="dark:text-gray-500 text-gray-400 hover:dark:text-gray-300 hover:text-gray-600 transition-colors">首页</router-link>
             <svg class="w-4 h-4 dark:text-gray-600 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,7 +137,7 @@
 </template>
 
 <script setup>
-import { computed, h } from 'vue'
+import { ref, computed, h } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
@@ -132,6 +145,7 @@ import { useThemeStore } from '@/stores/theme'
 const route = useRoute()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
+const sidebarCollapsed = ref(false)
 
 const currentTitle = computed(() => route.meta.title || '仪表盘')
 
