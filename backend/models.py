@@ -1,3 +1,4 @@
+import os
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Float, Boolean, ForeignKey, Enum as SQLEnum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -71,7 +72,14 @@ class OperationLog(Base):
     user = relationship("User", back_populates="operation_logs")
 
 
-DATABASE_URL = "sqlite:///./topflow.db"
+def get_database_url():
+    env_url = os.environ.get('DATABASE_URL')
+    if env_url:
+        return env_url
+    return "sqlite:///./data/topflow.db"
+
+
+DATABASE_URL = get_database_url()
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -86,3 +94,4 @@ def get_db():
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    print(f"✅ 数据库已初始化: {DATABASE_URL}")

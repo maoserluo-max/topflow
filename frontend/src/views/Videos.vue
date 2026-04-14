@@ -390,10 +390,11 @@ async function fetchVideos() {
 
 async function fetchUsers() {
   try {
-    const response = await api.get('/users/')
-    userList.value = response.items || response || []
+    const response = await api.get('/auth/users')
+    userList.value = Array.isArray(response) ? response : (response.items || [])
   } catch (error) {
-    console.error('Fetch users error:', error)
+    console.warn('获取用户列表失败（非管理员无法查看用户列表）:', error.message)
+    userList.value = []
   }
 }
 
