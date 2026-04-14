@@ -9,6 +9,10 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
   const isManager = computed(() => ['admin', 'manager'].includes(user.value?.role))
+  const userProjects = computed(() => {
+    if (!user.value?.projects) return ['Gamoji', 'Poseme', '内容孵化']
+    return user.value.projects.split(',').map(p => p.trim()).filter(p => p)
+  })
 
   async function login(username, password) {
     const formData = new FormData()
@@ -58,6 +62,7 @@ export const useUserStore = defineStore('user', () => {
     isLoggedIn,
     isAdmin,
     isManager,
+    userProjects,
     login,
     register,
     logout,

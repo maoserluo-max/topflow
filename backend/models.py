@@ -28,6 +28,7 @@ class User(Base):
     full_name = Column(String(100))
     role = Column(SQLEnum(UserRole), default=UserRole.USER)
     is_active = Column(Boolean, default=True)
+    projects = Column(String(200), default="Gamoji,Poseme,内容孵化")
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
@@ -40,6 +41,7 @@ class Video(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     video_code = Column(String(20), unique=True, index=True)
+    project = Column(String(50), nullable=False, default="Gamoji")
     platform = Column(String(20), nullable=False)
     region = Column(String(50))
     content_direction = Column(String(100))
@@ -158,5 +160,16 @@ def init_db():
             conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_videos_video_code ON videos (video_code)"))
             conn.commit()
             print("✅ 已添加 video_code 列")
+        if 'project' not in existing_columns:
+            conn.execute(text("ALTER TABLE videos ADD COLUMN project VARCHAR(50) DEFAULT 'Gamoji'"))
+            conn.commit()
+            print("✅ 已添加 project 列")
+
+        result = conn.execute(text("PRAGMA table_info(users)"))
+        existing_columns = {row[1] for row in result}
+        if 'projects' not in existing_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN projects VARCHAR(200) DEFAULT 'Gamoji,Poseme,内容孵化'"))
+            conn.commit()
+            print("✅ 已添加 projects 列")
 
     print(f"✅ 数据库已初始化: {DATABASE_URL}")

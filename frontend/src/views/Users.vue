@@ -83,6 +83,7 @@
               <th>邮箱</th>
               <th>姓名</th>
               <th>角色</th>
+              <th>项目权限</th>
               <th>状态</th>
               <th>注册时间</th>
               <th class="text-center">操作</th>
@@ -108,6 +109,17 @@
                 >
                   {{ getRoleName(user.role) }}
                 </span>
+              </td>
+              <td>
+                <div class="flex flex-wrap gap-1">
+                  <span
+                    v-for="p in getUserProjects(user)"
+                    :key="p"
+                    class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium dark:bg-primary-500/15 dark:text-primary-300 dark:border dark:border-primary-500/25 bg-primary-50 text-primary-600 border border-primary-200"
+                  >
+                    {{ p }}
+                  </span>
+                </div>
               </td>
               <td>
                 <div class="flex items-center gap-2">
@@ -159,7 +171,7 @@
               </td>
             </tr>
             <tr v-if="users.length === 0">
-              <td colspan="8" class="text-center py-20">
+              <td colspan="9" class="text-center py-20">
                 <div class="space-y-3">
                   <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary-500/10 to-cyber-purple/10 flex items-center justify-center">
                     <svg class="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -268,6 +280,11 @@ function deleteUser(user) {
 function formatDate(dateStr) {
   if (!dateStr) return '-'
   return new Date(dateStr).toLocaleString('zh-CN')
+}
+
+function getUserProjects(user) {
+  if (!user.projects) return ['Gamoji', 'Poseme', '内容孵化']
+  return user.projects.split(',').map(p => p.trim()).filter(p => p)
 }
 
 function getRoleName(role) {

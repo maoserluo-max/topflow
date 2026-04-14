@@ -43,7 +43,7 @@ def get_operation_logs(
     logs = query.order_by(desc(OperationLog.created_at)).offset((page - 1) * page_size).limit(page_size).all()
 
     return {
-        "items": logs,
+        "items": [OperationLogResponse.from_orm(log) for log in logs],
         "total": total,
         "page": page,
         "page_size": page_size,

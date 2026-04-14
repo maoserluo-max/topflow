@@ -1,13 +1,34 @@
 <template>
   <div class="min-h-screen p-8 space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-4xl font-bold gradient-text">视频管理</h1>
-      <button @click="showCreateDialog" class="cyber-button flex items-center gap-2 text-sm font-medium">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        新增视频
-      </button>
+      <div class="flex items-center gap-3">
+        <h1 class="text-4xl font-bold gradient-text">视频管理</h1>
+        <div class="flex items-center gap-2 ml-4">
+          <button
+            v-for="p in userProjects"
+            :key="p"
+            @click="switchProject(p)"
+            class="project-btn"
+            :class="{ 'project-btn-active': currentProject === p }"
+          >
+            {{ p }}
+          </button>
+        </div>
+      </div>
+      <div class="flex items-center">
+        <button @click="showCreateDialog" class="cyber-button flex items-center gap-2 text-sm font-medium">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          新增视频
+        </button>
+        <button v-if="isAdmin" @click="exportCSV" class="cyber-button flex items-center gap-2 text-sm font-medium ml-3" style="background: linear-gradient(to right, #059669, #047857);">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          导出CSV
+        </button>
+      </div>
     </div>
 
     <div class="glass-card p-6 animate-in">
@@ -150,6 +171,11 @@
                 </button>
               </td>
               <td>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold whitespace-nowrap dark:bg-primary-500/15 dark:text-primary-300 dark:border dark:border-primary-500/25 bg-primary-50 text-primary-600 border border-primary-200">
+                  {{ video.project || '-' }}
+                </span>
+              </td>
+              <td>
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold tracking-wide whitespace-nowrap" :class="getPlatformClass(video.platform)">
                   {{ video.platform?.toUpperCase() }}
                 </span>
@@ -230,9 +256,9 @@
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="detailVisible" class="fixed inset-0 z-50 overflow-y-auto" @click.self="detailVisible = false">
-          <div class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" />
-          <div class="relative min-h-screen flex items-center justify-center p-4">
-            <div class="relative w-full max-w-3xl glass-card p-8 animate-slide-up max-h-[90vh] overflow-y-auto scrollbar-hide">
+          <div class="sticky top-0 left-0 right-0 h-screen bg-black/60 backdrop-blur-sm transition-opacity" @click="detailVisible = false" />
+          <div class="relative min-h-screen flex items-center justify-center p-4" style="margin-top: -100vh">
+            <div class="relative w-full max-w-3xl glass-card p-8 animate-slide-up max-h-[90vh] overflow-y-auto scrollbar-hide" @click.stop>
               <button @click="detailVisible = false" class="absolute top-6 right-6 p-2 rounded-xl dark:hover:bg-white/10 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
@@ -249,6 +275,7 @@
                     <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">基本信息</h3>
                   </div>
                   <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="detail-field"><span class="detail-label">项目</span><span class="detail-value"><span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold dark:bg-primary-500/15 dark:text-primary-300 dark:border dark:border-primary-500/25 bg-primary-50 text-primary-600 border border-primary-200">{{ detailData?.project || '-' }}</span></span></div>
                     <div class="detail-field"><span class="detail-label">平台</span><span class="detail-value">{{ detailData?.platform?.toUpperCase() || '-' }}</span></div>
                     <div class="detail-field"><span class="detail-label">地区</span><span class="detail-value">{{ getRegionName(detailData?.region) }}</span></div>
                     <div class="detail-field"><span class="detail-label">达人名称</span><span class="detail-value">{{ detailData?.influencer_name || '-' }}</span></div>
@@ -329,6 +356,7 @@ const sortState = reactive({ field: 'publish_date', order: 'desc' })
 
 const columns = reactive([
   { key: 'video_code', label: '视频编号', width: 130, minWidth: 100, sortable: false, align: 'left', resizable: false },
+  { key: 'project', label: '项目', width: 85, minWidth: 65, sortable: false, align: 'center' },
   { key: 'platform', label: '平台', width: 80, minWidth: 60, sortable: false, align: 'center' },
   { key: 'region', label: '地区', width: 100, minWidth: 70, sortable: false, align: 'left' },
   { key: 'influencer_name', label: '达人', width: 110, minWidth: 80, sortable: false, align: 'left' },
@@ -361,7 +389,11 @@ const detailVisible = ref(false)
 const detailData = ref(null)
 
 const userRole = computed(() => userStore.user?.role || '')
+const isAdmin = computed(() => userStore.user?.role === 'admin')
 const canSelectAllUsers = computed(() => ['admin', 'manager'].includes(userRole.value))
+const userProjects = computed(() => userStore.userProjects)
+const currentProject = ref('')
+
 const userList = ref([])
 
 const regionOptions = [
@@ -433,9 +465,18 @@ function startResize(e, col) {
 }
 
 onMounted(async () => {
+  if (userProjects.value.length > 0) {
+    currentProject.value = userProjects.value[0]
+  }
   fetchVideos()
   if (canSelectAllUsers.value) await fetchUsers()
 })
+
+function switchProject(p) {
+  currentProject.value = p
+  currentPage.value = 1
+  fetchVideos()
+}
 
 async function fetchVideos() {
   loading.value = true
@@ -445,6 +486,7 @@ async function fetchVideos() {
       page_size: pageSize.value,
       sort_by: sortState.field,
       sort_order: sortState.order,
+      project: currentProject.value || undefined,
       ...filters
     }
     if (dateRange.value && dateRange.value.length === 2) {
@@ -500,6 +542,36 @@ function deleteVideo(video) {
 
 function openVideo(url) { window.open(url, '_blank') }
 
+async function exportCSV() {
+  try {
+    const params = {}
+    if (currentProject.value) params.project = currentProject.value
+    if (filters.platform) params.platform = filters.platform
+    if (filters.region) params.region = filters.region
+    if (filters.influencer_name) params.influencer_name = filters.influencer_name
+    if (filters.contact_person) params.contact_person = filters.contact_person
+    if (filters.status) params.status = filters.status
+    if (dateRange.value && dateRange.value.length === 2) {
+      params.start_date = dateRange.value[0]
+      params.end_date = dateRange.value[1]
+    }
+    const response = await api.get('/videos/export', { params, responseType: 'blob' })
+    const blob = response instanceof Blob ? response : new Blob([response], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `videos_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (error) {
+    console.error('Export error:', error)
+    ElMessage.error('导出失败')
+  }
+}
+
 function formatNumber(num) {
   if (!num) return '0'
   if (num >= 10000) return (num / 10000).toFixed(1) + 'w'
@@ -537,6 +609,41 @@ function getStatusName(status) {
 </script>
 
 <style scoped>
+.project-btn {
+  padding: 6px 18px;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.dark .project-btn {
+  background: rgba(255,255,255,0.05);
+  color: #9ca3af;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.project-btn {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+.dark .project-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border-color: rgba(255,255,255,0.2);
+}
+.project-btn:hover {
+  background: #e5e7eb;
+  color: #111827;
+  border-color: #d1d5db;
+}
+.project-btn-active {
+  background: linear-gradient(to right, #4f46e5, #4338ca) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 14px rgba(79,70,229,0.25);
+}
+
 .filter-select,
 .filter-input {
   width: 100%;

@@ -2,10 +2,10 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="visible" class="fixed inset-0 z-50 overflow-y-auto" @click.self="$emit('close')">
-        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" />
+        <div class="sticky top-0 left-0 right-0 h-screen bg-black/60 backdrop-blur-sm transition-opacity" @click="$emit('close')" />
 
-        <div class="relative min-h-screen flex items-center justify-center p-4">
-          <div class="relative w-full max-w-4xl glass-card p-8 animate-slide-up max-h-[90vh] overflow-y-auto scrollbar-hide">
+        <div class="relative min-h-screen flex items-center justify-center p-4" style="margin-top: -100vh">
+          <div class="relative w-full max-w-4xl glass-card p-8 animate-slide-up max-h-[90vh] overflow-y-auto scrollbar-hide" @click.stop>
             <button
               @click="$emit('close')"
               class="absolute top-6 right-6 p-2 rounded-xl dark:hover:bg-white/10 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
@@ -85,6 +85,16 @@
                       </button>
                     </div>
                     <p v-if="!isEdit && form.video_code" class="text-xs dark:text-gray-600 text-gray-400">可手动修改编号</p>
+                  </div>
+                  <div class="space-y-1.5">
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">项目 *</label>
+                    <select
+                      v-model="form.project"
+                      required
+                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+                    >
+                      <option v-for="p in availableProjects" :key="p" :value="p" class="dark:bg-gray-900 bg-white">{{ p }}</option>
+                    </select>
                   </div>
                   <div class="space-y-1.5">
                     <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">平台 *</label>
@@ -277,6 +287,7 @@ const fetching = ref(false)
 const currentUser = computed(() => userStore.user?.username || '')
 const userRole = computed(() => userStore.user?.role || '')
 const canSelectAllUsers = computed(() => ['admin', 'manager'].includes(userRole.value))
+const availableProjects = computed(() => userStore.userProjects)
 
 const regionOptions = [
   { value: 'ID', label: '印尼 (ID)' },
@@ -301,6 +312,7 @@ const statusOptions = [
 
 const defaultForm = {
   video_code: '',
+  project: '',
   platform: 'tiktok',
   region: '',
   content_direction: '',
@@ -326,6 +338,7 @@ watch(() => props.visible, (val) => {
     if (props.isEdit && props.editData) {
       Object.assign(form, {
         video_code: props.editData.video_code || '',
+        project: props.editData.project || availableProjects.value[0] || 'Gamoji',
         platform: props.editData.platform,
         region: props.editData.region,
         content_direction: props.editData.content_direction,
@@ -347,6 +360,7 @@ watch(() => props.visible, (val) => {
       codeManuallyEdited = false
       Object.assign(form, {
         ...defaultForm,
+        project: availableProjects.value[0] || 'Gamoji',
         publish_date: new Date().toISOString().split('T')[0],
         contact_person: canSelectAllUsers.value ? '' : currentUser.value
       })

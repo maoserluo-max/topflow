@@ -46,6 +46,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     role: Optional[str] = None
     is_active: Optional[bool] = None
+    projects: Optional[str] = None
 
     @field_validator('role')
     @classmethod
@@ -56,11 +57,22 @@ class UserUpdate(BaseModel):
                 raise ValueError(f'无效的角色，可选值: {", ".join(valid_roles)}')
         return v
 
+    @field_validator('projects')
+    @classmethod
+    def validate_projects(cls, v):
+        if v is not None:
+            valid_projects = ['Gamoji', 'Poseme', '内容孵化']
+            for p in v.split(','):
+                if p.strip() and p.strip() not in valid_projects:
+                    raise ValueError(f'无效的项目，可选值: {", ".join(valid_projects)}')
+        return v
+
 
 class UserResponse(UserBase):
     id: int
     role: str
     is_active: bool
+    projects: Optional[str] = "Gamoji,Poseme,内容孵化"
     created_at: datetime
 
     class Config:
@@ -80,6 +92,7 @@ class LoginRequest(BaseModel):
 
 class VideoBase(BaseModel):
     video_code: Optional[str] = None
+    project: str = "Gamoji"
     platform: str
     region: Optional[str] = None
     content_direction: Optional[str] = None
@@ -96,6 +109,14 @@ class VideoBase(BaseModel):
     contact_email: Optional[str] = None
     contact_whatsapp: Optional[str] = None
     status: Optional[str] = "pending_review"
+
+    @field_validator('project')
+    @classmethod
+    def validate_project(cls, v):
+        valid_projects = ['Gamoji', 'Poseme', '内容孵化']
+        if v not in valid_projects:
+            raise ValueError(f'无效的项目，可选值: {", ".join(valid_projects)}')
+        return v
 
     @field_validator('platform')
     @classmethod
@@ -137,6 +158,7 @@ class VideoCreate(VideoBase):
 
 class VideoUpdate(BaseModel):
     video_code: Optional[str] = None
+    project: Optional[str] = None
     platform: Optional[str] = None
     region: Optional[str] = None
     content_direction: Optional[str] = None

@@ -69,6 +69,26 @@
                 </select>
               </div>
 
+              <div class="space-y-1.5">
+                <label class="text-xs dark:text-gray-500 text-gray-600 font-medium uppercase tracking-wide">项目权限</label>
+                <div class="flex flex-wrap gap-2">
+                  <label
+                    v-for="p in allProjects"
+                    :key="p"
+                    class="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-all dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 dark:hover:bg-white/10 hover:bg-gray-50"
+                    :class="{ 'dark:!bg-primary-500/20 !bg-primary-50 dark:!border-primary-500/40 !border-primary-300 dark:!text-primary-300 !text-primary-700': form.selectedProjects.includes(p) }"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="p"
+                      v-model="form.selectedProjects"
+                      class="w-4 h-4 rounded accent-primary-500"
+                    />
+                    <span class="text-sm font-medium">{{ p }}</span>
+                  </label>
+                </div>
+              </div>
+
               <div v-if="!isEdit" class="space-y-1.5">
                 <label class="text-xs dark:text-gray-500 text-gray-600 font-medium uppercase tracking-wide">密码 *</label>
                 <input
@@ -124,12 +144,15 @@ const emit = defineEmits(['close', 'submitted'])
 
 const submitting = ref(false)
 
+const allProjects = ['Gamoji', 'Poseme', '内容孵化']
+
 const defaultForm = {
   username: '',
   email: '',
   full_name: '',
   role: 'user',
-  password: ''
+  password: '',
+  selectedProjects: ['Gamoji', 'Poseme', '内容孵化']
 }
 
 const form = reactive({ ...defaultForm })
@@ -142,7 +165,8 @@ watch(() => props.visible, (val) => {
         email: props.editData.email || '',
         full_name: props.editData.full_name || '',
         role: props.editData.role,
-        password: ''
+        password: '',
+        selectedProjects: props.editData.projects ? props.editData.projects.split(',').map(p => p.trim()).filter(p => p) : ['Gamoji', 'Poseme', '内容孵化']
       })
     } else {
       Object.assign(form, { ...defaultForm })
@@ -154,6 +178,8 @@ async function handleSubmit() {
   submitting.value = true
   try {
     const data = { ...form }
+    data.projects = data.selectedProjects.join(',')
+    delete data.selectedProjects
     if (props.isEdit) {
       delete data.password
       if (!data.email) delete data.email
