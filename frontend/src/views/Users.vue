@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between">
       <div class="space-y-1">
         <h1 class="text-4xl font-bold gradient-text">用户管理</h1>
-        <p class="text-gray-400 text-sm">管理系统用户账户、角色权限与状态</p>
+        <p :class="themeStore.isDark ? 'text-gray-400 text-sm' : 'text-gray-500 text-sm'">管理系统用户账户、角色权限与状态</p>
       </div>
       <button @click="showCreateDialog" class="cyber-button flex items-center gap-2 text-sm font-medium">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -25,8 +25,8 @@
               </svg>
             </div>
             <div>
-              <p class="text-xs text-gray-400 uppercase tracking-wider font-medium">总用户数</p>
-              <p class="text-3xl font-bold mt-1 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">{{ users.length }}</p>
+              <p :class="themeStore.isDark ? 'text-xs text-gray-400 uppercase tracking-wider font-medium' : 'text-xs text-gray-500 uppercase tracking-wider font-medium'">总用户数</p>
+              <p class="text-3xl font-bold mt-1" :class="themeStore.isDark ? 'bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent' : 'bg-gradient-to-r from-gray-800 to-gray-500 bg-clip-text text-transparent'">{{ users.length }}</p>
             </div>
           </div>
           <div class="w-full h-20 opacity-10 absolute right-0 top-0 rounded-r-2xl bg-gradient-to-l from-cyber-blue to-transparent"></div>
@@ -42,7 +42,7 @@
               </svg>
             </div>
             <div>
-              <p class="text-xs text-gray-400 uppercase tracking-wider font-medium">活跃用户</p>
+              <p :class="themeStore.isDark ? 'text-xs text-gray-400 uppercase tracking-wider font-medium' : 'text-xs text-gray-500 uppercase tracking-wider font-medium'">活跃用户</p>
               <p class="text-3xl font-bold mt-1 bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">{{ activeUserCount }}</p>
             </div>
           </div>
@@ -59,7 +59,7 @@
               </svg>
             </div>
             <div>
-              <p class="text-xs text-gray-400 uppercase tracking-wider font-medium">管理员</p>
+              <p :class="themeStore.isDark ? 'text-xs text-gray-400 uppercase tracking-wider font-medium' : 'text-xs text-gray-500 uppercase tracking-wider font-medium'">管理员</p>
               <p class="text-3xl font-bold mt-1 bg-gradient-to-r from-primary-400 to-purple-300 bg-clip-text text-transparent">{{ adminCount }}</p>
             </div>
           </div>
@@ -73,7 +73,7 @@
       <div v-if="loading" class="flex items-center justify-center py-20">
         <div class="space-y-4 text-center">
           <div class="w-12 h-12 mx-auto border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin"></div>
-          <p class="text-gray-400 text-sm">加载用户数据中...</p>
+          <p :class="themeStore.isDark ? 'text-gray-400 text-sm' : 'text-gray-500 text-sm'">加载用户数据中...</p>
         </div>
       </div>
 
@@ -93,17 +93,22 @@
           </thead>
           <tbody>
             <tr v-for="(user, index) in users" :key="user.id" class="group animate-in" :style="{ animationDelay: `${index * 50}ms` }">
-              <td class="font-mono text-xs text-gray-500">#{{ user.id }}</td>
+              <td :class="themeStore.isDark ? 'font-mono text-xs text-gray-500' : 'font-mono text-xs text-gray-500'">#{{ user.id }}</td>
               <td>
                 <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500/30 to-cyber-purple/30 flex items-center justify-center text-sm font-bold text-white uppercase">
+                  <div
+                    class="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold uppercase"
+                    :class="themeStore.isDark
+                      ? 'bg-gradient-to-br from-primary-500/30 to-cyber-purple/30 text-white'
+                      : 'bg-gradient-to-br from-primary-100 to-purple-100 text-white'"
+                  >
                     {{ (user.username || 'U').charAt(0) }}
                   </div>
-                  <span class="font-medium text-white">{{ user.username }}</span>
+                  <span :class="themeStore.isDark ? 'font-medium text-white' : 'font-medium text-gray-900'">{{ user.username }}</span>
                 </div>
               </td>
-              <td class="text-gray-400 text-sm">{{ user.email || '-' }}</td>
-              <td class="text-gray-300">{{ user.full_name || '-' }}</td>
+              <td :class="themeStore.isDark ? 'text-gray-400 text-sm' : 'text-gray-600 text-sm'">{{ user.email || '-' }}</td>
+              <td :class="themeStore.isDark ? 'text-gray-300' : 'text-gray-700'">{{ user.full_name || '-' }}</td>
               <td>
                 <span
                   class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold"
@@ -123,7 +128,7 @@
                   </span>
                 </div>
               </td>
-              <td class="text-sm text-gray-500 whitespace-nowrap">{{ formatDate(user.created_at) }}</td>
+              <td :class="themeStore.isDark ? 'text-sm text-gray-500 whitespace-nowrap' : 'text-sm text-gray-500 whitespace-nowrap'">{{ formatDate(user.created_at) }}</td>
               <td>
                 <div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   <button
@@ -169,7 +174,7 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
-                  <p class="text-gray-500 text-sm">暂无用户数据</p>
+                  <p :class="themeStore.isDark ? 'text-gray-500 text-sm' : 'text-gray-500 text-sm'">暂无用户数据</p>
                   <button @click="showCreateDialog" class="cyber-button text-sm px-4 py-2">
                     添加第一个用户
                   </button>
@@ -194,7 +199,9 @@
               <!-- 关闭按钮 -->
               <button
                 @click="dialogVisible = false"
-                class="absolute top-6 right-6 p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                :class="themeStore.isDark
+                  ? 'absolute top-6 right-6 p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-colors'
+                  : 'absolute top-6 right-6 p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors'"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -206,75 +213,87 @@
                 <h2 class="text-2xl font-bold gradient-text mb-2">
                   {{ isEdit ? '编辑用户' : '新增用户' }}
                 </h2>
-                <p class="text-sm text-gray-400">{{ isEdit ? '修改用户信息与权限' : '创建新的系统用户账户' }}</p>
+                <p :class="themeStore.isDark ? 'text-sm text-gray-400' : 'text-sm text-gray-500'">{{ isEdit ? '修改用户信息与权限' : '创建新的系统用户账户' }}</p>
               </div>
 
               <!-- 表单 -->
               <form @submit.prevent="handleSubmit" class="space-y-5">
                 <div class="space-y-1.5">
-                  <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">用户名 *</label>
+                  <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">用户名 *</label>
                   <input
                     v-model="form.username"
                     type="text"
                     required
                     placeholder="输入用户名"
                     :disabled="isEdit"
-                    class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    :class="themeStore.isDark
+                      ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
+                      : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed'"
                   />
                 </div>
 
                 <div class="space-y-1.5">
-                  <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">邮箱 *</label>
+                  <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">邮箱 *</label>
                   <input
                     v-model="form.email"
                     type="email"
                     required
                     placeholder="输入邮箱地址"
-                    class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+                    :class="themeStore.isDark
+                      ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'
+                      : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'"
                   />
                 </div>
 
                 <div class="space-y-1.5">
-                  <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">姓名</label>
+                  <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">姓名</label>
                   <input
                     v-model="form.full_name"
                     type="text"
                     placeholder="输入姓名（可选）"
-                    class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+                    :class="themeStore.isDark
+                      ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'
+                      : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'"
                   />
                 </div>
 
                 <div class="space-y-1.5">
-                  <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">角色 *</label>
+                  <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">角色 *</label>
                   <select
                     v-model="form.role"
                     required
-                    class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+                    :class="themeStore.isDark
+                      ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'
+                      : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'"
                   >
-                    <option value="admin" class="bg-gray-900">管理员</option>
-                    <option value="manager" class="bg-gray-900">经理</option>
-                    <option value="user" class="bg-gray-900">普通用户</option>
+                    <option value="admin" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">管理员</option>
+                    <option value="manager" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">经理</option>
+                    <option value="user" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">普通用户</option>
                   </select>
                 </div>
 
                 <div v-if="!isEdit" class="space-y-1.5">
-                  <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">密码 *</label>
+                  <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">密码 *</label>
                   <input
                     v-model="form.password"
                     type="password"
                     required
                     placeholder="输入密码（至少6位）"
                     minlength="6"
-                    class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+                    :class="themeStore.isDark
+                      ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'
+                      : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'"
                   />
                 </div>
 
                 <!-- 提交按钮 -->
-                <div class="flex justify-end gap-4 pt-6 mt-6 border-t border-white/5">
+                <div :class="themeStore.isDark ? 'flex justify-end gap-4 pt-6 mt-6 border-t border-white/5' : 'flex justify-end gap-4 pt-6 mt-6 border-t border-gray-200'">
                   <button
                     type="button"
                     @click="dialogVisible = false"
-                    class="px-8 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-200"
+                    :class="themeStore.isDark
+                      ? 'px-8 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-200'
+                      : 'px-8 py-3 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 transition-all duration-200'"
                   >
                     取消
                   </button>
@@ -303,7 +322,9 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '@/utils/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useThemeStore } from '@/stores/theme'
 
+const themeStore = useThemeStore()
 const loading = ref(false)
 const users = ref([])
 const currentPage = ref(1)
@@ -458,12 +479,20 @@ function getRoleName(role) {
 }
 
 function getRoleClass(role) {
-  const classes = {
-    admin: 'bg-red-500/10 text-red-400 border border-red-500/30 font-semibold',
-    manager: 'bg-amber-500/10 text-amber-400 border border-amber-500/30 font-semibold',
-    user: 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+  if (themeStore.isDark) {
+    const classes = {
+      admin: 'bg-red-500/10 text-red-400 border border-red-500/30 font-semibold',
+      manager: 'bg-amber-500/10 text-amber-400 border border-amber-500/30 font-semibold',
+      user: 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+    }
+    return classes[role] || 'bg-gray-500/10 text-gray-400 border border-gray-500/30'
   }
-  return classes[role] || 'bg-gray-500/10 text-gray-400 border border-gray-500/30'
+  const classes = {
+    admin: 'bg-red-50 text-red-600 border border-red-200 font-semibold',
+    manager: 'bg-amber-50 text-amber-600 border border-amber-200 font-semibold',
+    user: 'bg-blue-50 text-blue-600 border border-blue-200'
+  }
+  return classes[role] || 'bg-gray-100 text-gray-600 border border-gray-200'
 }
 </script>
 

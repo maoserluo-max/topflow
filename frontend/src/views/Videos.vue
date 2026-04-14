@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between">
       <div class="space-y-1">
         <h1 class="text-4xl font-bold gradient-text">视频管理</h1>
-        <p class="text-gray-400 text-sm">管理所有达人视频数据，支持自动抓取元数据</p>
+        <p :class="themeStore.isDark ? 'text-gray-400' : 'text-gray-500'" class="text-sm">管理所有达人视频数据，支持自动抓取元数据</p>
       </div>
       <button @click="showCreateDialog" class="cyber-button flex items-center gap-2 text-sm font-medium">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -18,62 +18,70 @@
     <div class="glass-card p-6 animate-in">
       <div class="flex items-center gap-3 mb-4">
         <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-blue to-cyber-purple"></span>
-        <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">筛选条件</h3>
+        <h3 :class="themeStore.isDark ? 'text-sm font-semibold text-gray-300 uppercase tracking-wider' : 'text-sm font-semibold text-gray-600 uppercase tracking-wider'">筛选条件</h3>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         <!-- 平台 -->
         <div class="space-y-1.5">
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">平台</label>
+          <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">平台</label>
           <select
             v-model="filters.platform"
-            class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+            :class="themeStore.isDark
+              ? 'w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'
+              : 'w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'"
           >
-            <option value="" class="bg-gray-900">全部平台</option>
-            <option value="tiktok" class="bg-gray-900">TikTok</option>
-            <option value="ins" class="bg-gray-900">Instagram</option>
-            <option value="youtube" class="bg-gray-900">YouTube</option>
+            <option value="" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">全部平台</option>
+            <option value="tiktok" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">TikTok</option>
+            <option value="ins" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">Instagram</option>
+            <option value="youtube" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">YouTube</option>
           </select>
         </div>
 
         <!-- 地区 -->
         <div class="space-y-1.5">
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">地区</label>
+          <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">地区</label>
           <select
             v-model="filters.region"
-            class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+            :class="themeStore.isDark
+              ? 'w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'
+              : 'w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'"
           >
-            <option value="" class="bg-gray-900">全部地区</option>
-            <option v-for="r in regionOptions" :key="r.value" :value="r.value" class="bg-gray-900">{{ r.label }}</option>
+            <option value="" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">全部地区</option>
+            <option v-for="r in regionOptions" :key="r.value" :value="r.value" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">{{ r.label }}</option>
           </select>
         </div>
 
         <!-- 达人名称 -->
         <div class="space-y-1.5">
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">达人</label>
+          <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">达人</label>
           <input
             v-model="filters.influencer_name"
             type="text"
             placeholder="搜索达人..."
-            class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+            :class="themeStore.isDark
+              ? 'w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'
+              : 'w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'"
           />
         </div>
 
         <!-- 状态 -->
         <div class="space-y-1.5">
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">状态</label>
+          <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">状态</label>
           <select
             v-model="filters.status"
-            class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+            :class="themeStore.isDark
+              ? 'w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'
+              : 'w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'"
           >
-            <option value="" class="bg-gray-900">全部状态</option>
-            <option v-for="s in statusOptions" :key="s.value" :value="s.value" class="bg-gray-900">{{ s.label }}</option>
+            <option value="" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">全部状态</option>
+            <option v-for="s in statusOptions" :key="s.value" :value="s.value" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">{{ s.label }}</option>
           </select>
         </div>
 
         <!-- 日期范围 -->
         <div class="space-y-1.5 lg:col-span-2">
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">发布日期</label>
+          <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">发布日期</label>
           <el-date-picker
             v-model="dateRange"
             type="daterange"
@@ -82,16 +90,18 @@
             end-placeholder="结束日期"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
-            class="!w-full !bg-white/5 !border-white/10 !rounded-xl"
+            :class="themeStore.isDark ? '!w-full !bg-white/5 !border-white/10 !rounded-xl' : '!w-full !bg-white !border-gray-200 !rounded-xl'"
           />
         </div>
       </div>
 
       <!-- 操作按钮 -->
-      <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-white/5">
+      <div :class="themeStore.isDark ? 'flex justify-end gap-3 mt-6 pt-4 border-t border-white/5' : 'flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200'">
         <button
           @click="resetFilters"
-          class="px-5 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-200"
+          :class="themeStore.isDark
+            ? 'px-5 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-200'
+            : 'px-5 py-2 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 transition-all duration-200'"
         >
           重置筛选
         </button>
@@ -109,7 +119,7 @@
       <div v-if="loading" class="flex items-center justify-center py-20">
         <div class="space-y-4 text-center">
           <div class="w-12 h-12 mx-auto border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin"></div>
-          <p class="text-gray-400 text-sm">加载数据中...</p>
+          <p :class="themeStore.isDark ? 'text-gray-400 text-sm' : 'text-gray-500 text-sm'">加载数据中...</p>
         </div>
       </div>
 
@@ -139,11 +149,11 @@
                   {{ video.platform?.toUpperCase() }}
                 </span>
               </td>
-              <td class="font-mono text-xs text-gray-400">{{ getRegionName(video.region) }}</td>
-              <td class="font-medium text-white">{{ video.influencer_name }}</td>
-              <td class="max-w-[200px] truncate text-gray-400">{{ video.title || '-' }}</td>
+              <td :class="themeStore.isDark ? 'font-mono text-xs text-gray-400' : 'font-mono text-xs text-gray-500'">{{ getRegionName(video.region) }}</td>
+              <td :class="themeStore.isDark ? 'font-medium text-white' : 'font-medium text-gray-900'">{{ video.influencer_name }}</td>
+              <td :class="themeStore.isDark ? 'max-w-[200px] truncate text-gray-400' : 'max-w-[200px] truncate text-gray-600'">{{ video.title || '-' }}</td>
               <td class="text-right font-mono text-cyber-green font-semibold">${{ video.price_usd || '0' }}</td>
-              <td class="text-sm text-gray-500 whitespace-nowrap">{{ formatDate(video.publish_date) }}</td>
+              <td :class="themeStore.isDark ? 'text-sm text-gray-500 whitespace-nowrap' : 'text-sm text-gray-500 whitespace-nowrap'">{{ formatDate(video.publish_date) }}</td>
               <td class="text-right font-mono text-cyber-blue">{{ formatNumber(video.play_count) }}</td>
               <td class="text-right font-mono text-pink-400">{{ formatNumber(video.like_count) }}</td>
               <td>
@@ -195,7 +205,7 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <p class="text-gray-500 text-sm">暂无视频数据</p>
+                  <p :class="themeStore.isDark ? 'text-gray-500 text-sm' : 'text-gray-500 text-sm'">暂无视频数据</p>
                   <button @click="showCreateDialog" class="cyber-button text-sm px-4 py-2">
                     添加第一条视频
                   </button>
@@ -207,38 +217,44 @@
       </div>
 
       <!-- 分页器 -->
-      <div v-if="total > 0" class="flex items-center justify-between px-6 py-4 border-t border-white/5">
-        <div class="text-sm text-gray-500">
-          共 <span class="text-white font-semibold">{{ total }}</span> 条记录
+      <div v-if="total > 0" :class="themeStore.isDark ? 'flex items-center justify-between px-6 py-4 border-t border-white/5' : 'flex items-center justify-between px-6 py-4 border-t border-gray-200'">
+        <div :class="themeStore.isDark ? 'text-sm text-gray-500' : 'text-sm text-gray-500'">
+          共 <span :class="themeStore.isDark ? 'text-white font-semibold' : 'text-gray-900 font-semibold'">{{ total }}</span> 条记录
         </div>
         <div class="flex items-center gap-4">
           <select
             v-model="pageSize"
             @change="fetchVideos"
-            class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 focus:outline-none focus:border-cyber-blue/50"
+            :class="themeStore.isDark
+              ? 'px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 focus:outline-none focus:border-cyber-blue/50'
+              : 'px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-sm text-gray-700 focus:outline-none focus:border-cyber-blue/50'"
           >
-            <option :value="10" class="bg-gray-900">10条/页</option>
-            <option :value="20" class="bg-gray-900">20条/页</option>
-            <option :value="50" class="bg-gray-900">50条/页</option>
-            <option :value="100" class="bg-gray-900">100条/页</option>
+            <option :value="10" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">10条/页</option>
+            <option :value="20" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">20条/页</option>
+            <option :value="50" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">50条/页</option>
+            <option :value="100" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">100条/页</option>
           </select>
           <div class="flex items-center gap-2">
             <button
               @click="currentPage > 1 && (currentPage--, fetchVideos())"
               :disabled="currentPage === 1"
-              class="p-2 rounded-lg hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              :class="themeStore.isDark
+                ? 'p-2 rounded-lg hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all'
+                : 'p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all'"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <span class="text-sm text-gray-400 min-w-[80px] text-center">
-              第 <span class="text-white font-medium">{{ currentPage }}</span> / {{ Math.ceil(total / pageSize) }} 页
+            <span :class="themeStore.isDark ? 'text-sm text-gray-400 min-w-[80px] text-center' : 'text-sm text-gray-500 min-w-[80px] text-center'">
+              第 <span :class="themeStore.isDark ? 'text-white font-medium' : 'text-gray-900 font-medium'">{{ currentPage }}</span> / {{ Math.ceil(total / pageSize) }} 页
             </span>
             <button
               @click="currentPage < Math.ceil(total / pageSize) && (currentPage++, fetchVideos())"
               :disabled="currentPage >= Math.ceil(total / pageSize)"
-              class="p-2 rounded-lg hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              :class="themeStore.isDark
+                ? 'p-2 rounded-lg hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all'
+                : 'p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all'"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -262,7 +278,9 @@
               <!-- 关闭按钮 -->
               <button
                 @click="dialogVisible = false"
-                class="absolute top-6 right-6 p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                :class="themeStore.isDark
+                  ? 'absolute top-6 right-6 p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-colors'
+                  : 'absolute top-6 right-6 p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors'"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -274,7 +292,7 @@
                 <h2 class="text-2xl font-bold gradient-text mb-2">
                   {{ isEdit ? '编辑视频' : '新增视频' }}
                 </h2>
-                <p v-if="!isEdit" class="text-sm text-gray-400 flex items-center gap-2">
+                <p v-if="!isEdit" :class="themeStore.isDark ? 'text-sm text-gray-400 flex items-center gap-2' : 'text-sm text-gray-500 flex items-center gap-2'">
                   <span class="w-1.5 h-1.5 rounded-full bg-cyber-blue animate-pulse"></span>
                   可粘贴链接并点击「抓取数据」自动填充信息
                 </p>
@@ -286,14 +304,16 @@
                 <div class="space-y-4">
                   <div class="flex items-center gap-3">
                     <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-blue to-cyber-purple"></span>
-                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">视频链接（可选）</h3>
+                    <h3 :class="themeStore.isDark ? 'text-sm font-semibold text-gray-300 uppercase tracking-wider' : 'text-sm font-semibold text-gray-600 uppercase tracking-wider'">视频链接（可选）</h3>
                   </div>
                   <div class="flex gap-3">
                     <input
                       v-model="form.video_url"
                       type="url"
                       placeholder="粘贴 TikTok / Instagram / YouTube 链接..."
-                      class="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+                      :class="themeStore.isDark
+                        ? 'flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'
+                        : 'flex-1 px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'"
                     />
                     <button
                       type="button"
@@ -317,175 +337,169 @@
                 <div class="space-y-4">
                   <div class="flex items-center gap-3">
                     <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-purple to-pink-500"></span>
-                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">基本信息</h3>
+                    <h3 :class="themeStore.isDark ? 'text-sm font-semibold text-gray-300 uppercase tracking-wider' : 'text-sm font-semibold text-gray-600 uppercase tracking-wider'">基本信息</h3>
                   </div>
 
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">平台 *</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">平台 *</label>
                       <select
                         v-model="form.platform"
                         required
-                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'
+                          : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'"
                       >
-                        <option value="tiktok" class="bg-gray-900">TikTok</option>
-                        <option value="ins" class="bg-gray-900">Instagram</option>
-                        <option value="youtube" class="bg-gray-900">YouTube</option>
+                        <option value="tiktok" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">TikTok</option>
+                        <option value="ins" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">Instagram</option>
+                        <option value="youtube" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">YouTube</option>
                       </select>
                     </div>
 
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">地区</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">地区</label>
                       <select
                         v-model="form.region"
-                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'
+                          : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'"
                       >
-                        <option value="" class="bg-gray-900">选择地区</option>
-                        <option v-for="r in regionOptions" :key="r.value" :value="r.value" class="bg-gray-900">{{ r.label }}</option>
+                        <option value="" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">选择地区</option>
+                        <option v-for="r in regionOptions" :key="r.value" :value="r.value" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">{{ r.label }}</option>
                       </select>
                     </div>
 
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">达人名称 *</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">达人名称 *</label>
                       <input
                         v-model="form.influencer_name"
                         type="text"
                         required
                         placeholder="输入达人名称"
-                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'
+                          : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'"
                       />
                     </div>
 
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">内容方向</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">内容方向</label>
                       <select
                         v-model="form.content_direction"
-                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'
+                          : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'"
                       >
-                        <option value="" class="bg-gray-900">选择方向</option>
-                        <option v-for="d in directionOptions" :key="d.value" :value="d.value" class="bg-gray-900">{{ d.label }}</option>
+                        <option value="" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">选择方向</option>
+                        <option v-for="d in directionOptions" :key="d.value" :value="d.value" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">{{ d.label }}</option>
                       </select>
                     </div>
 
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">合作价格 ($)</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">合作价格 ($)</label>
                       <input
                         v-model.number="form.price_usd"
                         type="number"
-                        min="0"
                         step="0.01"
-                        placeholder="0.00"
-                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all"
+                        min="0"
+                        placeholder="输入价格"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'
+                          : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'"
                       />
                     </div>
 
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">对接人</label>
-                      <select
-                        v-if="canSelectAllUsers"
-                        v-model="form.contact_person"
-                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all"
-                      >
-                        <option value="" class="bg-gray-900">选择对接人</option>
-                        <option v-for="u in userList" :key="u.username" :value="u.username" class="bg-gray-900">{{ u.full_name || u.username }}</option>
-                      </select>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">标题</label>
                       <input
-                        v-else
-                        :value="currentUser"
+                        v-model="form.title"
                         type="text"
-                        disabled
-                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-500 cursor-not-allowed"
+                        placeholder="输入视频标题"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'
+                          : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'"
                       />
                     </div>
-                  </div>
 
-                  <div class="space-y-1.5">
-                    <label class="text-xs text-gray-500 font-medium">标题</label>
-                    <textarea
-                      v-model="form.title"
-                      rows="2"
-                      placeholder="输入视频标题"
-                      class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all resize-none"
-                    ></textarea>
-                  </div>
-                </div>
-
-                <!-- 发布与状态 -->
-                <div class="space-y-4">
-                  <div class="flex items-center gap-3">
-                    <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-orange-500 to-yellow-500"></span>
-                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">发布与状态</h3>
-                  </div>
-
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">发布日期</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">发布日期</label>
                       <input
                         v-model="form.publish_date"
                         type="date"
-                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-orange-500/50 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'
+                          : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'"
                       />
                     </div>
 
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">状态</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">状态</label>
                       <select
                         v-model="form.status"
-                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-orange-500/50 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'
+                          : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-cyber-purple/50 focus:outline-none focus:ring-2 focus:ring-cyber-purple/20 transition-all'"
                       >
-                        <option v-for="s in statusOptions" :key="s.value" :value="s.value" class="bg-gray-900">{{ s.label }}</option>
+                        <option v-for="s in statusOptions" :key="s.value" :value="s.value" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">{{ s.label }}</option>
                       </select>
                     </div>
                   </div>
                 </div>
 
-                <!-- 数据统计 -->
+                <!-- 数据指标 -->
                 <div class="space-y-4">
                   <div class="flex items-center gap-3">
-                    <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-emerald-500 to-teal-500"></span>
-                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">数据统计</h3>
-                    <span class="text-xs text-gray-600">(自动获取或手动填写)</span>
+                    <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-green to-emerald-500"></span>
+                    <h3 :class="themeStore.isDark ? 'text-sm font-semibold text-gray-300 uppercase tracking-wider' : 'text-sm font-semibold text-gray-600 uppercase tracking-wider'">数据指标</h3>
                   </div>
 
                   <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">播放量</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">播放量</label>
                       <input
                         v-model.number="form.play_count"
                         type="number"
                         min="0"
                         placeholder="0"
-                        class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-green/50 focus:outline-none focus:ring-2 focus:ring-cyber-green/20 transition-all'
+                          : 'w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-green/50 focus:outline-none focus:ring-2 focus:ring-cyber-green/20 transition-all'"
                       />
                     </div>
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">点赞数</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">点赞数</label>
                       <input
                         v-model.number="form.like_count"
                         type="number"
                         min="0"
                         placeholder="0"
-                        class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-green/50 focus:outline-none focus:ring-2 focus:ring-cyber-green/20 transition-all'
+                          : 'w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-green/50 focus:outline-none focus:ring-2 focus:ring-cyber-green/20 transition-all'"
                       />
                     </div>
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">评论数</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">评论数</label>
                       <input
                         v-model.number="form.comment_count"
                         type="number"
                         min="0"
                         placeholder="0"
-                        class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-green/50 focus:outline-none focus:ring-2 focus:ring-cyber-green/20 transition-all'
+                          : 'w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-green/50 focus:outline-none focus:ring-2 focus:ring-cyber-green/20 transition-all'"
                       />
                     </div>
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">分享数</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">分享数</label>
                       <input
                         v-model.number="form.share_count"
                         type="number"
                         min="0"
                         placeholder="0"
-                        class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-cyber-green/50 focus:outline-none focus:ring-2 focus:ring-cyber-green/20 transition-all'
+                          : 'w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-green/50 focus:outline-none focus:ring-2 focus:ring-cyber-green/20 transition-all'"
                       />
                     </div>
                   </div>
@@ -495,37 +509,43 @@
                 <div class="space-y-4">
                   <div class="flex items-center gap-3">
                     <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-pink-500 to-rose-500"></span>
-                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">联系方式</h3>
+                    <h3 :class="themeStore.isDark ? 'text-sm font-semibold text-gray-300 uppercase tracking-wider' : 'text-sm font-semibold text-gray-600 uppercase tracking-wider'">联系方式</h3>
                   </div>
 
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">邮箱</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">邮箱</label>
                       <input
                         v-model="form.contact_email"
                         type="email"
                         placeholder="联系邮箱地址"
-                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all'
+                          : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all'"
                       />
                     </div>
                     <div class="space-y-1.5">
-                      <label class="text-xs text-gray-500 font-medium">WhatsApp</label>
+                      <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium' : 'text-xs text-gray-600 font-medium'">WhatsApp</label>
                       <input
                         v-model="form.contact_whatsapp"
                         type="tel"
                         placeholder="WhatsApp号码"
-                        class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all"
+                        :class="themeStore.isDark
+                          ? 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 placeholder-gray-600 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all'
+                          : 'w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all'"
                       />
                     </div>
                   </div>
                 </div>
 
                 <!-- 提交按钮 -->
-                <div class="flex justify-end gap-4 pt-6 border-t border-white/5">
+                <div :class="themeStore.isDark ? 'flex justify-end gap-4 pt-6 border-t border-white/5' : 'flex justify-end gap-4 pt-6 border-t border-gray-200'">
                   <button
                     type="button"
                     @click="dialogVisible = false"
-                    class="px-8 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-200"
+                    :class="themeStore.isDark
+                      ? 'px-8 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-200'
+                      : 'px-8 py-3 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 transition-all duration-200'"
                   >
                     取消
                   </button>
@@ -555,8 +575,10 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import api from '@/utils/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { useThemeStore } from '@/stores/theme'
 
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 const loading = ref(false)
 const videos = ref([])
 const currentPage = ref(1)
@@ -821,21 +843,21 @@ function getPlatformType(platform) {
 }
 
 function getStatusType(status) {
-  const types = { 
-    pending_review: 'info', 
-    pending_publish: 'warning', 
-    published: '', 
-    completed: 'success' 
+  const types = {
+    pending_review: 'info',
+    pending_publish: 'warning',
+    published: '',
+    completed: 'success'
   }
   return types[status] || 'info'
 }
 
 function getStatusName(status) {
-  const names = { 
-    pending_review: '待审核', 
-    pending_publish: '待发布', 
-    published: '已发布', 
-    completed: '已完成' 
+  const names = {
+    pending_review: '待审核',
+    pending_publish: '待发布',
+    published: '已发布',
+    completed: '已完成'
   }
   return names[status] || status
 }
@@ -846,22 +868,39 @@ function getRegionName(region) {
 }
 
 function getPlatformClass(platform) {
-  const classes = {
-    tiktok: 'bg-black/40 text-gray-200 border border-white/20',
-    ins: 'bg-pink-500/10 text-pink-400 border border-pink-500/30',
-    youtube: 'bg-red-500/10 text-red-400 border border-red-500/30'
+  if (themeStore.isDark) {
+    const classes = {
+      tiktok: 'bg-black/40 text-gray-200 border border-white/20',
+      ins: 'bg-pink-500/10 text-pink-400 border border-pink-500/30',
+      youtube: 'bg-red-500/10 text-red-400 border border-red-500/30'
+    }
+    return classes[platform] || 'bg-gray-500/10 text-gray-300 border border-gray-500/30'
   }
-  return classes[platform] || 'bg-gray-500/10 text-gray-300 border border-gray-500/30'
+  const classes = {
+    tiktok: 'bg-gray-100 text-gray-700 border border-gray-200',
+    ins: 'bg-pink-50 text-pink-600 border border-pink-200',
+    youtube: 'bg-red-50 text-red-600 border border-red-200'
+  }
+  return classes[platform] || 'bg-gray-100 text-gray-600 border border-gray-200'
 }
 
 function getStatusClass(status) {
-  const classes = {
-    pending_review: 'bg-blue-500/10 text-blue-400 border border-blue-500/30',
-    pending_publish: 'bg-amber-500/10 text-amber-400 border border-amber-500/30',
-    published: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
-    completed: 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+  if (themeStore.isDark) {
+    const classes = {
+      pending_review: 'bg-blue-500/10 text-blue-400 border border-blue-500/30',
+      pending_publish: 'bg-amber-500/10 text-amber-400 border border-amber-500/30',
+      published: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
+      completed: 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+    }
+    return classes[status] || 'bg-gray-500/10 text-gray-400 border border-gray-500/30'
   }
-  return classes[status] || 'bg-gray-500/10 text-gray-400 border border-gray-500/30'
+  const classes = {
+    pending_review: 'bg-blue-50 text-blue-600 border border-blue-200',
+    pending_publish: 'bg-amber-50 text-amber-600 border border-amber-200',
+    published: 'bg-emerald-50 text-emerald-600 border border-emerald-200',
+    completed: 'bg-purple-50 text-purple-600 border border-purple-200'
+  }
+  return classes[status] || 'bg-gray-100 text-gray-600 border border-gray-200'
 }
 </script>
 

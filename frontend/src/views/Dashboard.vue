@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-4xl font-bold gradient-text mb-2">数据总览</h1>
-        <p class="text-gray-400 text-sm">实时监控您的达人营销数据</p>
+        <p :class="themeStore.isDark ? 'text-gray-400' : 'text-gray-500'" class="text-sm">实时监控您的达人营销数据</p>
       </div>
       <div class="flex items-center gap-3">
         <el-date-picker
@@ -16,7 +16,7 @@
           format="YYYY-MM-DD"
           value-format="YYYY-MM-DD"
           @change="fetchStats"
-          class="!bg-white/5 !border-white/10 !rounded-xl"
+          :class="themeStore.isDark ? '!bg-white/5 !border-white/10 !rounded-xl' : '!bg-white !border-gray-200 !rounded-xl'"
         />
       </div>
     </div>
@@ -38,8 +38,8 @@
               <component :is="stat.icon" />
             </div>
             <div>
-              <p class="text-xs text-gray-400 uppercase tracking-wider font-medium">{{ stat.title }}</p>
-              <p class="text-3xl font-bold mt-1 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              <p :class="themeStore.isDark ? 'text-gray-400' : 'text-gray-500'" class="text-xs uppercase tracking-wider font-medium">{{ stat.title }}</p>
+              <p class="text-3xl font-bold mt-1" :class="themeStore.isDark ? 'bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent' : 'bg-gradient-to-r from-gray-800 to-gray-500 bg-clip-text text-transparent'">
                 {{ formatNumber(stat.value) }}
               </p>
             </div>
@@ -57,7 +57,7 @@
       <!-- 趋势图 - 大卡片 -->
       <div class="lg:col-span-2 glass-card p-6 animate-in" style="animation-delay: 200ms">
         <div class="flex items-center justify-between mb-6">
-          <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+          <h3 :class="themeStore.isDark ? 'text-white' : 'text-gray-900'" class="text-lg font-semibold flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-cyber-blue animate-pulse"></span>
             视频数据趋势
           </h3>
@@ -69,9 +69,9 @@
       </div>
 
       <!-- 平台分布 - 玻璃卡片 -->
-      <div class="glass-card p-6 animate-in" style="animationDelay: 300ms">
+      <div class="glass-card p-6 animate-in" style="animation-delay: 300ms">
         <div class="flex items-center justify-between mb-6">
-          <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+          <h3 :class="themeStore.isDark ? 'text-white' : 'text-gray-900'" class="text-lg font-semibold flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-cyber-purple animate-pulse"></span>
             平台分布
           </h3>
@@ -81,9 +81,9 @@
     </div>
 
     <!-- 最近视频记录 - 高级表格 -->
-    <div class="glass-card p-6 animate-in" style="animationDelay: 400ms">
+    <div class="glass-card p-6 animate-in" style="animation-delay: 400ms">
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+        <h3 :class="themeStore.isDark ? 'text-white' : 'text-gray-900'" class="text-lg font-semibold flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-cyber-green animate-pulse"></span>
           最近视频记录
         </h3>
@@ -118,15 +118,15 @@
                   {{ video.platform?.toUpperCase() }}
                 </span>
               </td>
-              <td class="font-medium text-white">{{ video.influencer_name }}</td>
-              <td class="max-w-xs truncate text-gray-400">{{ video.title || '-' }}</td>
+              <td :class="themeStore.isDark ? 'font-medium text-white' : 'font-medium text-gray-900'">{{ video.influencer_name }}</td>
+              <td :class="themeStore.isDark ? 'max-w-xs truncate text-gray-400' : 'max-w-xs truncate text-gray-600'">{{ video.title || '-' }}</td>
               <td class="text-right font-mono text-cyber-blue">{{ formatNumber(video.play_count) }}</td>
               <td class="text-right font-mono text-pink-400">{{ formatNumber(video.like_count) }}</td>
               <td class="text-right font-mono text-cyber-green">${{ video.price_usd || '0' }}</td>
-              <td class="text-gray-500 text-sm whitespace-nowrap">{{ formatDate(video.created_at) }}</td>
+              <td :class="themeStore.isDark ? 'text-gray-500' : 'text-gray-400'" class="text-sm whitespace-nowrap">{{ formatDate(video.created_at) }}</td>
             </tr>
             <tr v-if="recentVideos.length === 0">
-              <td colspan="7" class="text-center py-12 text-gray-500">
+              <td colspan="7" :class="themeStore.isDark ? 'text-center py-12 text-gray-500' : 'text-center py-12 text-gray-400'">
                 <div class="space-y-2">
                   <div class="text-4xl">📊</div>
                   <p>暂无视频数据</p>
@@ -144,7 +144,9 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import api from '@/utils/api'
 import * as echarts from 'echarts'
+import { useThemeStore } from '@/stores/theme'
 
+const themeStore = useThemeStore()
 const dateRange = ref([])
 const stats = ref([
   {
@@ -229,24 +231,53 @@ async function fetchStats() {
   }
 }
 
+function getThemeColors() {
+  if (themeStore.isDark) {
+    return {
+      bgColor: 'transparent',
+      tooltipBg: 'rgba(15, 23, 42, 0.9)',
+      tooltipBorder: 'rgba(99, 102, 241, 0.3)',
+      textColor: '#e2e8f0',
+      subTextColor: '#94a3b8',
+      axisLineColor: 'rgba(148, 163, 184, 0.1)',
+      splitLineColor: 'rgba(148, 163, 184, 0.05)',
+      pieBorderColor: 'rgba(15, 23, 42, 0.8)',
+      emphasisColor: '#fff'
+    }
+  }
+  return {
+    bgColor: 'transparent',
+    tooltipBg: 'rgba(255, 255, 255, 0.95)',
+    tooltipBorder: 'rgba(99, 102, 241, 0.2)',
+    textColor: '#1e293b',
+    subTextColor: '#64748b',
+    axisLineColor: 'rgba(226, 232, 240, 0.8)',
+    splitLineColor: 'rgba(226, 232, 240, 0.5)',
+    pieBorderColor: 'rgba(255, 255, 255, 0.8)',
+    emphasisColor: '#111827'
+  }
+}
+
 function updateTrendChart(platformData) {
   if (!trendChartInstance) return
 
+  const tc = getThemeColors()
+
   const option = {
-    backgroundColor: 'transparent',
+    backgroundColor: tc.bgColor,
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(15, 23, 42, 0.9)',
-      borderColor: 'rgba(99, 102, 241, 0.3)',
+      backgroundColor: tc.tooltipBg,
+      borderColor: tc.tooltipBorder,
       borderWidth: 1,
       textStyle: {
-        color: '#e2e8f0'
+        color: tc.textColor
       }
     },
     legend: {
       data: Object.keys(platformData),
       textStyle: {
-        color: '#94a3b8'
+        color: tc.subTextColor
       },
       top: 0
     },
@@ -260,10 +291,10 @@ function updateTrendChart(platformData) {
       type: 'category',
       data: ['视频数量'],
       axisLine: {
-        lineStyle: { color: 'rgba(148, 163, 184, 0.1)' }
+        lineStyle: { color: tc.axisLineColor }
       },
       axisLabel: {
-        color: '#94a3b8'
+        color: tc.subTextColor
       }
     },
     yAxis: {
@@ -273,11 +304,11 @@ function updateTrendChart(platformData) {
       },
       splitLine: {
         lineStyle: {
-          color: 'rgba(148, 163, 184, 0.05)'
+          color: tc.splitLineColor
         }
       },
       axisLabel: {
-        color: '#94a3b8'
+        color: tc.subTextColor
       }
     },
     series: Object.entries(platformData).map(([name, value], index) => ({
@@ -301,15 +332,17 @@ function updateTrendChart(platformData) {
 function updatePlatformChart(platformData, regionData) {
   if (!platformChartInstance) return
 
+  const tc = getThemeColors()
+
   const option = {
-    backgroundColor: 'transparent',
+    backgroundColor: tc.bgColor,
     tooltip: {
       trigger: 'item',
-      backgroundColor: 'rgba(15, 23, 42, 0.9)',
-      borderColor: 'rgba(99, 102, 241, 0.3)',
+      backgroundColor: tc.tooltipBg,
+      borderColor: tc.tooltipBorder,
       borderWidth: 1,
       textStyle: {
-        color: '#e2e8f0'
+        color: tc.textColor
       },
       formatter: '{b}: {c} ({d}%)'
     },
@@ -317,7 +350,7 @@ function updatePlatformChart(platformData, regionData) {
       orient: 'vertical',
       left: 'left',
       textStyle: {
-        color: '#94a3b8'
+        color: tc.subTextColor
       }
     },
     series: [{
@@ -327,7 +360,7 @@ function updatePlatformChart(platformData, regionData) {
       avoidLabelOverlap: false,
       itemStyle: {
         borderRadius: 10,
-        borderColor: 'rgba(15, 23, 42, 0.8)',
+        borderColor: tc.pieBorderColor,
         borderWidth: 2
       },
       label: {
@@ -339,7 +372,7 @@ function updatePlatformChart(platformData, regionData) {
           show: true,
           fontSize: 18,
           fontWeight: 'bold',
-          color: '#fff'
+          color: tc.emphasisColor
         }
       },
       labelLine: {
@@ -384,11 +417,19 @@ function getPlatformType(platform) {
 }
 
 function getPlatformClass(platform) {
-  const classes = {
-    tiktok: 'bg-black/30 text-gray-200 border border-white/10',
-    ins: 'bg-pink-500/10 text-pink-400 border border-pink-500/20',
-    youtube: 'bg-red-500/10 text-red-400 border border-red-500/20'
+  if (themeStore.isDark) {
+    const classes = {
+      tiktok: 'bg-black/30 text-gray-200 border border-white/10',
+      ins: 'bg-pink-500/10 text-pink-400 border border-pink-500/20',
+      youtube: 'bg-red-500/10 text-red-400 border border-red-500/20'
+    }
+    return classes[platform] || 'bg-gray-500/10 text-gray-300 border border-gray-500/20'
   }
-  return classes[platform] || 'bg-gray-500/10 text-gray-300 border border-gray-500/20'
+  const classes = {
+    tiktok: 'bg-gray-100 text-gray-700 border border-gray-200',
+    ins: 'bg-pink-50 text-pink-600 border border-pink-200',
+    youtube: 'bg-red-50 text-red-600 border border-red-200'
+  }
+  return classes[platform] || 'bg-gray-100 text-gray-600 border border-gray-200'
 }
 </script>
