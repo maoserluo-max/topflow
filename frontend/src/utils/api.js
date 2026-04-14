@@ -1,4 +1,5 @@
 import axios from 'axios'
+import router from '@/router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 
@@ -19,12 +20,17 @@ api.interceptors.request.use(
 )
 
 api.interceptors.response.use(
-  response => response.data,
+  response => {
+    if (response.config.responseType === 'blob') {
+      return response.data
+    }
+    return response.data
+  },
   error => {
     if (error.response?.status === 401) {
       const userStore = useUserStore()
       userStore.logout()
-      window.location.href = '/login'
+      router.push('/login')
       ElMessage.error('登录已过期，请重新登录')
     } else if (error.response?.data?.detail) {
       ElMessage.error(error.response.data.detail)

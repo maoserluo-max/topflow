@@ -3,7 +3,7 @@
     <div class="flex items-center justify-between">
       <div class="space-y-1">
         <h1 class="text-4xl font-bold gradient-text">操作日志</h1>
-        <p :class="themeStore.isDark ? 'text-gray-400 text-sm' : 'text-gray-500 text-sm'">记录系统所有操作行为，支持筛选与导出</p>
+        <p class="text-sm dark:text-gray-400 text-gray-500">记录系统所有操作行为，支持筛选与导出</p>
       </div>
       <button @click="exportLogs" class="cyber-button flex items-center gap-2 text-sm font-medium">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -16,47 +16,43 @@
     <div class="glass-card p-6 animate-in">
       <div class="flex items-center gap-3 mb-4">
         <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-blue to-cyber-purple"></span>
-        <h3 :class="themeStore.isDark ? 'text-sm font-semibold text-gray-300 uppercase tracking-wider' : 'text-sm font-semibold text-gray-600 uppercase tracking-wider'">筛选条件</h3>
+        <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">筛选条件</h3>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div class="space-y-1.5">
-          <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">操作类型</label>
+          <label class="text-xs dark:text-gray-500 text-gray-600 font-medium uppercase tracking-wide">操作类型</label>
           <select
             v-model="filters.action"
-            :class="themeStore.isDark
-              ? 'w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'
-              : 'w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'"
+            class="w-full px-4 py-2.5 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
           >
-            <option value="" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">全部操作</option>
-            <option value="用户登录" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">用户登录</option>
-            <option value="用户注册" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">用户注册</option>
-            <option value="创建视频" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">创建视频</option>
-            <option value="更新视频" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">更新视频</option>
-            <option value="删除视频" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">删除视频</option>
-            <option value="抓取视频元数据" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">抓取视频元数据</option>
-            <option value="更新用户" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">更新用户</option>
-            <option value="删除用户" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">删除用户</option>
+            <option value="" class="dark:bg-gray-900 bg-white">全部操作</option>
+            <option value="用户登录" class="dark:bg-gray-900 bg-white">用户登录</option>
+            <option value="用户注册" class="dark:bg-gray-900 bg-white">用户注册</option>
+            <option value="创建视频" class="dark:bg-gray-900 bg-white">创建视频</option>
+            <option value="更新视频" class="dark:bg-gray-900 bg-white">更新视频</option>
+            <option value="删除视频" class="dark:bg-gray-900 bg-white">删除视频</option>
+            <option value="抓取视频元数据" class="dark:bg-gray-900 bg-white">抓取视频元数据</option>
+            <option value="更新用户" class="dark:bg-gray-900 bg-white">更新用户</option>
+            <option value="删除用户" class="dark:bg-gray-900 bg-white">删除用户</option>
           </select>
         </div>
 
         <div class="space-y-1.5">
-          <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">模块</label>
+          <label class="text-xs dark:text-gray-500 text-gray-600 font-medium uppercase tracking-wide">模块</label>
           <select
             v-model="filters.module"
-            :class="themeStore.isDark
-              ? 'w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'
-              : 'w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all'"
+            class="w-full px-4 py-2.5 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
           >
-            <option value="" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">全部模块</option>
-            <option value="认证" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">认证</option>
-            <option value="视频管理" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">视频管理</option>
-            <option value="系统管理" :class="themeStore.isDark ? 'bg-gray-900' : 'bg-white'">系统管理</option>
+            <option value="" class="dark:bg-gray-900 bg-white">全部模块</option>
+            <option value="认证" class="dark:bg-gray-900 bg-white">认证</option>
+            <option value="视频管理" class="dark:bg-gray-900 bg-white">视频管理</option>
+            <option value="系统管理" class="dark:bg-gray-900 bg-white">系统管理</option>
           </select>
         </div>
 
         <div class="space-y-1.5 lg:col-span-2">
-          <label :class="themeStore.isDark ? 'text-xs text-gray-500 font-medium uppercase tracking-wide' : 'text-xs text-gray-600 font-medium uppercase tracking-wide'">时间范围</label>
+          <label class="text-xs dark:text-gray-500 text-gray-600 font-medium uppercase tracking-wide">时间范围</label>
           <el-date-picker
             v-model="dateRange"
             type="daterange"
@@ -65,7 +61,7 @@
             end-placeholder="结束日期"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
-            :class="themeStore.isDark ? '!w-full !bg-white/5 !border-white/10 !rounded-xl' : '!w-full !bg-white !border-gray-200 !rounded-xl'"
+            class="!w-full !rounded-xl dark:!bg-white/5 dark:!border-white/10 !bg-white !border-gray-200"
           />
         </div>
 
@@ -79,9 +75,7 @@
             </button>
             <button
               @click="resetFilters"
-              :class="themeStore.isDark
-                ? 'px-5 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-200'
-                : 'px-5 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 transition-all duration-200'"
+              class="px-5 py-2.5 rounded-xl text-sm font-medium dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/5 dark:border-white/10 dark:hover:border-white/20 text-gray-500 hover:text-gray-900 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 transition-all duration-200"
             >
               重置
             </button>
@@ -94,7 +88,7 @@
       <div v-if="loading" class="flex items-center justify-center py-20">
         <div class="space-y-4 text-center">
           <div class="w-12 h-12 mx-auto border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin"></div>
-          <p :class="themeStore.isDark ? 'text-gray-400 text-sm' : 'text-gray-500 text-sm'">加载日志数据中...</p>
+          <p class="dark:text-gray-400 text-gray-500 text-sm">加载日志数据中...</p>
         </div>
       </div>
 
@@ -112,7 +106,7 @@
           </thead>
           <tbody>
             <tr v-for="(log, index) in logs" :key="log.id" class="group animate-in" :style="{ animationDelay: `${index * 50}ms` }">
-              <td :class="themeStore.isDark ? 'font-mono text-xs text-gray-500' : 'font-mono text-xs text-gray-500'">#{{ log.id }}</td>
+              <td class="font-mono text-xs dark:text-gray-500 text-gray-500">#{{ log.id }}</td>
               <td>
                 <span
                   class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold"
@@ -122,18 +116,13 @@
                 </span>
               </td>
               <td>
-                <span
-                  class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium"
-                  :class="themeStore.isDark
-                    ? 'bg-white/5 text-gray-300 border border-white/10'
-                    : 'bg-gray-100 text-gray-600 border border-gray-200'"
-                >
+                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium dark:bg-white/5 dark:text-gray-300 dark:border dark:border-white/10 bg-gray-100 text-gray-600 border border-gray-200">
                   {{ log.module || '-' }}
                 </span>
               </td>
-              <td :class="themeStore.isDark ? 'max-w-[300px] truncate text-gray-400' : 'max-w-[300px] truncate text-gray-600'">{{ log.detail || '-' }}</td>
-              <td :class="themeStore.isDark ? 'font-mono text-xs text-gray-500' : 'font-mono text-xs text-gray-500'">{{ log.ip_address || '-' }}</td>
-              <td :class="themeStore.isDark ? 'text-sm text-gray-500 whitespace-nowrap' : 'text-sm text-gray-500 whitespace-nowrap'">{{ formatDate(log.created_at) }}</td>
+              <td class="max-w-[300px] truncate dark:text-gray-400 text-gray-600">{{ log.detail || '-' }}</td>
+              <td class="font-mono text-xs dark:text-gray-500 text-gray-500">{{ log.ip_address || '-' }}</td>
+              <td class="text-sm whitespace-nowrap dark:text-gray-500 text-gray-500">{{ formatDate(log.created_at) }}</td>
             </tr>
           </tbody>
         </table>
@@ -142,38 +131,16 @@
           <svg class="w-16 h-16 mx-auto text-gray-600 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <p :class="themeStore.isDark ? 'text-gray-500 text-sm' : 'text-gray-500 text-sm'">暂无日志数据</p>
+          <p class="dark:text-gray-500 text-gray-500 text-sm">暂无日志数据</p>
         </div>
       </div>
 
-      <div v-if="total > 0" :class="themeStore.isDark ? 'px-6 py-4 border-t border-white/5 flex items-center justify-between' : 'px-6 py-4 border-t border-gray-200 flex items-center justify-between'">
-        <p :class="themeStore.isDark ? 'text-sm text-gray-500' : 'text-sm text-gray-500'">
-          共 <span :class="themeStore.isDark ? 'font-medium text-gray-300' : 'font-medium text-gray-700'">{{ total }}</span> 条记录
-        </p>
-        <div class="flex items-center gap-2">
-          <button
-            @click="currentPage > 1 && (currentPage--, fetchLogs())"
-            :disabled="currentPage <= 1"
-            :class="themeStore.isDark
-              ? 'px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all'
-              : 'px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all'"
-          >
-            上一页
-          </button>
-          <span class="px-4 py-1.5 rounded-lg bg-primary-500/10 text-primary-400 text-sm font-medium">
-            {{ currentPage }} / {{ totalPages }}
-          </span>
-          <button
-            @click="currentPage < totalPages && (currentPage++, fetchLogs())"
-            :disabled="currentPage >= totalPages"
-            :class="themeStore.isDark
-              ? 'px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all'
-              : 'px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all'"
-          >
-            下一页
-          </button>
-        </div>
-      </div>
+      <Pagination
+        v-model="currentPage"
+        :total="total"
+        :page-size="pageSize"
+        @change="fetchLogs"
+      />
     </div>
   </div>
 </template>
@@ -182,6 +149,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '@/utils/api'
 import { useThemeStore } from '@/stores/theme'
+import { ElMessage } from 'element-plus'
+import Pagination from '@/components/Pagination.vue'
 
 const themeStore = useThemeStore()
 const loading = ref(false)
@@ -242,9 +211,12 @@ async function exportLogs() {
       params.end_date = dateRange.value[1]
     }
 
-    const response = await api.get('/admin/export-logs', { params })
+    const response = await api.get('/admin/export-logs', {
+      params,
+      responseType: 'blob'
+    })
 
-    const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' })
+    const blob = response instanceof Blob ? response : new Blob([response], { type: 'text/csv;charset=utf-8;' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -254,10 +226,10 @@ async function exportLogs() {
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
 
-    alert('导出成功')
+    ElMessage.success('导出成功')
   } catch (error) {
     console.error('Export error:', error)
-    alert('导出失败')
+    ElMessage.error('导出失败')
   }
 }
 
@@ -267,29 +239,16 @@ function formatDate(dateStr) {
 }
 
 function getActionClass(action) {
-  if (themeStore.isDark) {
-    const map = {
-      '用户登录': 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25',
-      '用户注册': 'bg-blue-500/15 text-blue-400 border border-blue-500/25',
-      '创建视频': 'bg-primary-500/15 text-primary-400 border border-primary-500/25',
-      '更新视频': 'bg-amber-500/15 text-amber-400 border border-amber-500/25',
-      '删除视频': 'bg-red-500/15 text-red-400 border border-red-500/25',
-      '抓取视频元数据': 'bg-cyber-purple/15 text-cyber-purple border border-cyber-purple/25',
-      '更新用户': 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/25',
-      '删除用户': 'bg-red-500/15 text-red-400 border border-red-500/25'
-    }
-    return map[action] || 'bg-gray-500/15 text-gray-400 border border-gray-500/25'
+  const classes = {
+    '用户登录': 'dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/25 bg-emerald-50 text-emerald-600 border border-emerald-200',
+    '用户注册': 'dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/25 bg-blue-50 text-blue-600 border border-blue-200',
+    '创建视频': 'dark:bg-primary-500/15 dark:text-primary-400 dark:border-primary-500/25 bg-primary-50 text-primary-600 border border-primary-200',
+    '更新视频': 'dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25 bg-amber-50 text-amber-600 border border-amber-200',
+    '删除视频': 'dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/25 bg-red-50 text-red-600 border border-red-200',
+    '抓取视频元数据': 'dark:bg-cyber-purple/15 dark:text-cyber-purple dark:border-cyber-purple/25 bg-purple-50 text-purple-600 border border-purple-200',
+    '更新用户': 'dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/25 bg-cyan-50 text-cyan-600 border border-cyan-200',
+    '删除用户': 'dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/25 bg-red-50 text-red-600 border border-red-200'
   }
-  const map = {
-    '用户登录': 'bg-emerald-50 text-emerald-600 border border-emerald-200',
-    '用户注册': 'bg-blue-50 text-blue-600 border border-blue-200',
-    '创建视频': 'bg-primary-50 text-primary-600 border border-primary-200',
-    '更新视频': 'bg-amber-50 text-amber-600 border border-amber-200',
-    '删除视频': 'bg-red-50 text-red-600 border border-red-200',
-    '抓取视频元数据': 'bg-purple-50 text-purple-600 border border-purple-200',
-    '更新用户': 'bg-cyan-50 text-cyan-600 border border-cyan-200',
-    '删除用户': 'bg-red-50 text-red-600 border border-red-200'
-  }
-  return map[action] || 'bg-gray-100 text-gray-600 border border-gray-200'
+  return classes[action] || 'dark:bg-gray-500/15 dark:text-gray-400 dark:border-gray-500/25 bg-gray-100 text-gray-600 border border-gray-200'
 }
 </script>

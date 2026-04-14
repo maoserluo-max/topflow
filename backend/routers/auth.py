@@ -5,7 +5,7 @@ from datetime import datetime
 
 from models import get_db, User, UserRole, OperationLog
 from auth import verify_password, get_password_hash, create_access_token, get_current_user, get_current_admin
-from schemas import UserCreate, UserResponse, Token, LoginRequest
+from schemas import UserCreate, UserUpdate, UserResponse, Token, LoginRequest
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
@@ -94,7 +94,7 @@ def get_users(
 @router.put("/users/{user_id}", response_model=UserResponse)
 def update_user(
     user_id: int,
-    user_update: dict,
+    user_update: UserUpdate,
     current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
@@ -102,9 +102,12 @@ def update_user(
     if not db_user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
-    for key, value in user_update.items():
-        if hasattr(db_user, key) and value is not None:
-            setattr(db_user, key, value)
+    update_data = user_update.dict(exclude_unset=True)
+    if "role" in update_data and update_data["role"]:
+        update_data["role"] = UserRole(update_data["role"])
+
+    for field, value in update_data.items():
+        setattr(db_user, field, value)
 
     db.commit()
     db.refresh(db_user)

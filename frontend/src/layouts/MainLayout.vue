@@ -1,10 +1,7 @@
 <template>
-  <div class="h-screen flex overflow-hidden transition-colors duration-300" :class="themeStore.isDark ? 'bg-gray-950' : 'bg-gray-100'">
-    <!-- 侧边栏 -->
-    <aside class="w-64 flex-shrink-0 flex flex-col backdrop-blur-xl relative transition-colors duration-300" 
-      :class="themeStore.isDark ? 'border-r border-white/5 bg-gray-950/95' : 'border-r border-gray-200/80 bg-white/95'">
-      <!-- Logo 区域 -->
-      <div class="p-6" :class="themeStore.isDark ? 'border-b border-white/5' : 'border-b border-gray-200'">
+  <div class="h-screen flex overflow-hidden transition-colors duration-300 dark:bg-gray-950 bg-gray-100">
+    <aside class="w-64 flex-shrink-0 flex flex-col backdrop-blur-xl relative transition-colors duration-300 dark:border-r dark:border-white/5 dark:bg-gray-950/95 border-r border-gray-200/80 bg-white/95">
+      <div class="p-6 dark:border-b dark:border-white/5 border-b border-gray-200">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-cyber-purple flex items-center justify-center shadow-lg shadow-primary-500/30">
             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13,12 +10,11 @@
           </div>
           <div>
             <h1 class="text-lg font-bold gradient-text">TopFlow</h1>
-            <p class="text-[10px] uppercase tracking-widest" :class="themeStore.isDark ? 'text-gray-500' : 'text-gray-400'">达人营销管理</p>
+            <p class="text-[10px] uppercase tracking-widest dark:text-gray-500 text-gray-400">达人营销管理</p>
           </div>
         </div>
       </div>
 
-      <!-- 导航菜单 -->
       <nav class="flex-1 py-6 px-4 space-y-1 overflow-y-auto scrollbar-hide">
         <router-link
           v-for="item in menuItems"
@@ -36,48 +32,39 @@
         </router-link>
       </nav>
 
-      <!-- 底部信息 -->
-      <div class="p-4" :class="themeStore.isDark ? 'border-t border-white/5' : 'border-t border-gray-200'">
-        <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl" :class="themeStore.isDark ? 'bg-white/[0.02]' : 'bg-gray-100'">
+      <div class="p-4 dark:border-t dark:border-white/5 border-t border-gray-200">
+        <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl dark:bg-white/[0.02] bg-gray-100">
           <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
             <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-xs font-medium truncate" :class="themeStore.isDark ? 'text-gray-300' : 'text-gray-700'">系统运行中</p>
-            <p class="text-[10px]" :class="themeStore.isDark ? 'text-gray-600' : 'text-gray-400'">v2.0.0</p>
+            <p class="text-xs font-medium truncate dark:text-gray-300 text-gray-700">系统运行中</p>
+            <p class="text-[10px] dark:text-gray-600 text-gray-400">v2.0.0</p>
           </div>
         </div>
       </div>
 
-      <!-- 装饰性光晕 (仅深色模式) -->
       <div v-if="themeStore.isDark" class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-primary-500/5 to-transparent pointer-events-none"></div>
     </aside>
 
-    <!-- 主内容区 -->
     <div class="flex-1 flex flex-col min-w-0">
-      <!-- 顶部导航栏 -->
-      <header class="h-16 px-8 flex items-center justify-between backdrop-blur-xl sticky top-0 z-40 transition-colors duration-300" 
-        :class="themeStore.isDark ? 'border-b border-white/5 bg-gray-950/80' : 'border-b border-gray-200 bg-white/90'">
-        <!-- 左侧：面包屑导航 -->
+      <header class="h-16 px-8 flex items-center justify-between backdrop-blur-xl sticky top-0 z-40 transition-colors duration-300 dark:border-b dark:border-white/5 dark:bg-gray-950/80 border-b border-gray-200 bg-white/90">
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-2 text-sm">
-            <router-link to="/" :class="themeStore.isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'" class="transition-colors">首页</router-link>
-            <svg class="w-4 h-4" :class="themeStore.isDark ? 'text-gray-600' : 'text-gray-300'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <router-link to="/" class="dark:text-gray-500 text-gray-400 hover:dark:text-gray-300 hover:text-gray-600 transition-colors">首页</router-link>
+            <svg class="w-4 h-4 dark:text-gray-600 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
-            <span class="font-medium" :class="themeStore.isDark ? 'text-white' : 'text-gray-900'">{{ currentTitle }}</span>
+            <span class="font-medium dark:text-white text-gray-900">{{ currentTitle }}</span>
           </div>
         </div>
 
-        <!-- 右侧：操作区 -->
         <div class="flex items-center gap-4">
-          <!-- 主题切换按钮 -->
           <button
             @click="themeStore.toggleTheme()"
-            class="relative p-2.5 rounded-xl transition-all duration-300 hover:scale-105"
-            :class="themeStore.isDark ? 'bg-white/5 hover:bg-white/10 text-yellow-400' : 'bg-gray-100 hover:bg-gray-200 text-indigo-500'"
+            class="relative p-2.5 rounded-xl transition-all duration-300 hover:scale-105 dark:bg-white/5 dark:hover:bg-white/10 dark:text-yellow-400 bg-gray-100 hover:bg-gray-200 text-indigo-500"
             title="切换主题"
           >
             <svg v-if="themeStore.isDark" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,23 +75,18 @@
             </svg>
           </button>
 
-          <!-- 状态指示器 -->
-          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg" 
-            :class="themeStore.isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200'">
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg dark:bg-emerald-500/10 dark:border dark:border-emerald-500/20 bg-emerald-50 border border-emerald-200">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span class="text-xs text-emerald-600 font-medium">在线</span>
           </div>
 
-          <!-- 用户下拉菜单 -->
           <div class="relative group">
-            <button class="flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-200"
-              :class="themeStore.isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100'"
-            >
+            <button class="flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-200 dark:hover:bg-white/5 hover:bg-gray-100">
               <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-cyber-purple flex items-center justify-center text-sm font-bold text-white shadow-lg shadow-primary-500/20">
                 {{ (userStore.user?.full_name || userStore.user?.username || 'U').charAt(0).toUpperCase() }}
               </div>
               <div class="text-left hidden sm:block">
-                <p class="text-sm font-medium" :class="themeStore.isDark ? 'text-white' : 'text-gray-900'">{{ userStore.user?.full_name || userStore.user?.username }}</p>
+                <p class="text-sm font-medium dark:text-white text-gray-900">{{ userStore.user?.full_name || userStore.user?.username }}</p>
               </div>
               <span
                 class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider"
@@ -112,12 +94,11 @@
               >
                 {{ getRoleName(userStore.user?.role) }}
               </span>
-              <svg class="w-4 h-4 transition-colors" :class="themeStore.isDark ? 'text-gray-400 group-hover:text-white' : 'text-gray-400 group-hover:text-gray-700'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 transition-colors dark:text-gray-400 dark:group-hover:text-white text-gray-400 group-hover:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
 
-            <!-- 下拉菜单内容 -->
             <div class="absolute right-0 mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 translate-y-2 group-hover:translate-y-0">
               <div class="glass-card p-2 space-y-1">
                 <button
@@ -135,8 +116,7 @@
         </div>
       </header>
 
-      <!-- 页面内容区域 -->
-      <main class="flex-1 overflow-auto transition-colors duration-300" :class="themeStore.isDark ? '' : 'bg-gray-50'">
+      <main class="flex-1 overflow-auto transition-colors duration-300 dark:bg-transparent bg-gray-50">
         <router-view />
       </main>
     </div>
@@ -186,11 +166,6 @@ const menuItems = computed(() => {
 
   return baseItems
 })
-
-function getRoleType(role) {
-  const types = { admin: 'danger', manager: 'warning', user: 'info' }
-  return types[role] || 'info'
-}
 
 function getRoleName(role) {
   const names = { admin: '管理员', manager: '经理', user: '用户' }

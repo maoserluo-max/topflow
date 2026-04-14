@@ -70,4 +70,5 @@ def root():
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "healthy", "timestamp": "2026-04-13T12:00:00Z"}
+    from datetime import datetime, timezone
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}

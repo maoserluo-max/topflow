@@ -1,6 +1,14 @@
-from pydantic import BaseModel, EmailStr
+import re
+import enum
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime
+
+
+class PlatformEnum(str, enum.Enum):
+    tiktok = "tiktok"
+    ins = "ins"
+    youtube = "youtube"
 
 
 class UserBase(BaseModel):
@@ -8,9 +16,29 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
 
+    @field_validator('username')
+    @classmethod
+    def validate_username(cls, v):
+        if len(v) < 3:
+            raise ValueError('用户名至少3个字符')
+        if len(v) > 50:
+            raise ValueError('用户名不能超过50个字符')
+        if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fff]+$', v):
+            raise ValueError('用户名只能包含字母、数字、下划线和中文')
+        return v
+
 
 class UserCreate(UserBase):
     password: str
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 6:
+            raise ValueError('密码至少6个字符')
+        if len(v) > 72:
+            raise ValueError('密码不能超过72个字符')
+        return v
 
 
 class UserUpdate(BaseModel):
@@ -18,6 +46,15 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     role: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @field_validator('role')
+    @classmethod
+    def validate_role(cls, v):
+        if v is not None:
+            valid_roles = ['admin', 'manager', 'user']
+            if v not in valid_roles:
+                raise ValueError(f'无效的角色，可选值: {", ".join(valid_roles)}')
+        return v
 
 
 class UserResponse(UserBase):
@@ -59,6 +96,39 @@ class VideoBase(BaseModel):
     contact_whatsapp: Optional[str] = None
     status: Optional[str] = "pending"
 
+    @field_validator('platform')
+    @classmethod
+    def validate_platform(cls, v):
+        valid_platforms = [e.value for e in PlatformEnum]
+        if v not in valid_platforms:
+            raise ValueError(f'无效的平台，可选值: {", ".join(valid_platforms)}')
+        return v
+
+    @field_validator('influencer_name')
+    @classmethod
+    def validate_influencer_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError('达人名称不能为空')
+        if len(v.strip()) > 100:
+            raise ValueError('达人名称不能超过100个字符')
+        return v.strip()
+
+    @field_validator('price_usd')
+    @classmethod
+    def validate_price(cls, v):
+        if v is not None and v < 0:
+            raise ValueError('价格不能为负数')
+        return v
+
+    @field_validator('status')
+    @classmethod
+    def validate_status(cls, v):
+        if v is not None:
+            valid_statuses = ['pending', 'approved', 'rejected', 'published']
+            if v not in valid_statuses:
+                raise ValueError(f'无效的状态，可选值: {", ".join(valid_statuses)}')
+        return v
+
 
 class VideoCreate(VideoBase):
     pass
@@ -81,6 +151,42 @@ class VideoUpdate(BaseModel):
     contact_email: Optional[str] = None
     contact_whatsapp: Optional[str] = None
     status: Optional[str] = None
+
+    @field_validator('platform')
+    @classmethod
+    def validate_platform(cls, v):
+        if v is not None:
+            valid_platforms = [e.value for e in PlatformEnum]
+            if v not in valid_platforms:
+                raise ValueError(f'无效的平台，可选值: {", ".join(valid_platforms)}')
+        return v
+
+    @field_validator('influencer_name')
+    @classmethod
+    def validate_influencer_name(cls, v):
+        if v is not None:
+            if not v.strip():
+                raise ValueError('达人名称不能为空')
+            if len(v.strip()) > 100:
+                raise ValueError('达人名称不能超过100个字符')
+            return v.strip()
+        return v
+
+    @field_validator('price_usd')
+    @classmethod
+    def validate_price(cls, v):
+        if v is not None and v < 0:
+            raise ValueError('价格不能为负数')
+        return v
+
+    @field_validator('status')
+    @classmethod
+    def validate_status(cls, v):
+        if v is not None:
+            valid_statuses = ['pending', 'approved', 'rejected', 'published']
+            if v not in valid_statuses:
+                raise ValueError(f'无效的状态，可选值: {", ".join(valid_statuses)}')
+        return v
 
 
 class VideoResponse(VideoBase):
@@ -120,3 +226,15 @@ class DashboardStats(BaseModel):
 
 class CrawlerRequest(BaseModel):
     url: str
+
+    @field_validator('url')
+    @classmethod
+    def validate_url(cls, v):
+        if not v or not v.strip():
+            raise ValueError('URL不能为空')
+        url_pattern = re.compile(
+            r'^https?://'
+        )
+        if not url_pattern.match(v.strip()):
+            raise ValueError('请输入有效的URL（以http://或https://开头）')
+        return v.strip()

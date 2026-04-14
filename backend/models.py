@@ -2,7 +2,11 @@ import os
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Float, Boolean, ForeignKey, Enum as SQLEnum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 import enum
 
 Base = declarative_base()
@@ -24,8 +28,8 @@ class User(Base):
     full_name = Column(String(100))
     role = Column(SQLEnum(UserRole), default=UserRole.USER)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
     videos = relationship("Video", back_populates="creator")
     operation_logs = relationship("OperationLog", back_populates="user")
@@ -52,8 +56,8 @@ class Video(Base):
     contact_whatsapp = Column(String(30))
     creator_id = Column(Integer, ForeignKey("users.id"))
     status = Column(String(20), default="pending")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
     creator = relationship("User", back_populates="videos")
 
@@ -67,16 +71,22 @@ class OperationLog(Base):
     module = Column(String(50))
     detail = Column(Text)
     ip_address = Column(String(50))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
 
     user = relationship("User", back_populates="operation_logs")
 
 
 def get_database_url():
-    env_url = os.environ.get('DATABASE_URL')
-    if env_url:
-        return env_url
-    return "sqlite:///./data/topflow.db"
+    from config import settings
+    url = settings.DATABASE_URL
+    if url.startswith("sqlite:///./"):
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        rel_path = url[len("sqlite:///./"):]
+        abs_path = os.path.normpath(os.path.join(base_dir, '..', rel_path))
+        data_dir = os.path.dirname(abs_path)
+        os.makedirs(data_dir, exist_ok=True)
+        return f"sqlite:///{abs_path}"
+    return url
 
 
 DATABASE_URL = get_database_url()

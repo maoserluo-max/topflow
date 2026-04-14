@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
+import csv
+import io
 
-from models import get_db, User, OperationLog, UserRole
+from models import get_db, User, OperationLog, UserRole, Video
 from auth import get_current_admin
 from schemas import OperationLogResponse
 
@@ -55,12 +58,11 @@ def get_system_stats(
 ):
     total_users = db.query(User).count()
     active_users = db.query(User).filter(User.is_active == True).count()
-    
-    from models import Video
+
     total_videos = db.query(Video).count()
-    
+
     today_logs = db.query(OperationLog).filter(
-        OperationLog.created_at >= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        OperationLog.created_at >= datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     ).count()
 
     return {
@@ -73,7 +75,6 @@ def get_system_stats(
 
 @router.get("/export-logs")
 def export_logs(
-    format: str = "csv",
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     current_user: User = Depends(get_current_admin),
@@ -88,13 +89,13 @@ def export_logs(
 
     logs = query.order_by(desc(OperationLog.created_at)).all()
 
-    if format == "csv":
-        import csv
-        import io
-
+    def generate():
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["ID", "用户ID", "操作", "模块", "详情", "IP地址", "时间"])
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
 
         for log in logs:
             writer.writerow([
@@ -106,8 +107,13 @@ def export_logs(
                 log.ip_address or "",
                 log.created_at.strftime("%Y-%m-%d %H:%M:%S") if log.created_at else ""
             ])
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
 
-        output.seek(0)
-        return {"data": output.getvalue(), "format": "csv"}
-
-    return {"message": "仅支持CSV格式导出"}
+    filename = f"operation_logs_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"
+    return StreamingResponse(
+        generate(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

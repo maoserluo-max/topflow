@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, asc
 from typing import Optional
 from datetime import datetime
+import asyncio
 
 from models import get_db, Video, User, OperationLog, UserRole
 from auth import get_current_user, get_current_manager_or_admin, get_current_admin
@@ -162,13 +163,13 @@ def delete_video(
 
 
 @router.post("/fetch-metadata")
-def fetch_metadata(
+async def fetch_metadata(
     request: CrawlerRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     try:
-        data = crawler.extract_video(request.url)
+        data = await asyncio.to_thread(crawler.extract_video, request.url)
         if not data:
             raise HTTPException(status_code=400, detail="无法获取视频数据，请检查链接是否正确")
 
@@ -182,6 +183,8 @@ def fetch_metadata(
         db.commit()
 
         return data
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -209,33 +212,35 @@ def get_dashboard_stats(
     if region:
         query = query.filter(Video.region == region)
 
-    videos = query.all()
+    agg_result = query.with_entities(
+        func.count(Video.id).label('total_videos'),
+        func.coalesce(func.sum(Video.play_count), 0).label('total_plays'),
+        func.coalesce(func.sum(Video.like_count), 0).label('total_likes'),
+        func.coalesce(func.sum(Video.comment_count), 0).label('total_comments'),
+        func.coalesce(func.sum(Video.share_count), 0).label('total_shares'),
+        func.coalesce(func.sum(Video.price_usd), 0).label('total_amount'),
+    ).first()
 
-    total_videos = len(videos)
-    total_plays = sum(v.play_count or 0 for v in videos)
-    total_likes = sum(v.like_count or 0 for v in videos)
-    total_comments = sum(v.comment_count or 0 for v in videos)
-    total_shares = sum(v.share_count or 0 for v in videos)
-    total_amount = sum(v.price_usd or 0 for v in videos)
+    base_filter = query.whereclause
+    platform_query = db.query(Video.platform, func.count(Video.id))
+    if base_filter is not None:
+        platform_query = platform_query.filter(base_filter)
+    platform_stats = dict(platform_query.group_by(Video.platform).all())
 
-    platform_stats = {}
-    for v in videos:
-        platform_stats[v.platform] = platform_stats.get(v.platform, 0) + 1
+    region_query = db.query(Video.region, func.count(Video.id)).filter(Video.region.isnot(None))
+    if base_filter is not None:
+        region_query = region_query.filter(base_filter)
+    region_stats = dict(region_query.group_by(Video.region).all())
 
-    region_stats = {}
-    for v in videos:
-        if v.region:
-            region_stats[v.region] = region_stats.get(v.region, 0) + 1
-
-    recent_videos = sorted(videos, key=lambda x: x.created_at, reverse=True)[:10]
+    recent_videos = query.order_by(desc(Video.created_at)).limit(10).all()
 
     return DashboardStats(
-        total_videos=total_videos,
-        total_plays=total_plays,
-        total_likes=total_likes,
-        total_comments=total_comments,
-        total_shares=total_shares,
-        total_amount=total_amount,
+        total_videos=agg_result.total_videos,
+        total_plays=agg_result.total_plays,
+        total_likes=agg_result.total_likes,
+        total_comments=agg_result.total_comments,
+        total_shares=agg_result.total_shares,
+        total_amount=agg_result.total_amount,
         videos_by_platform=platform_stats,
         videos_by_region=region_stats,
         recent_videos=[VideoResponse.from_orm(v) for v in recent_videos]
