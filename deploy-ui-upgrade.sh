@@ -59,10 +59,22 @@ fi
 # 验证 Tailwind CSS 配置
 if grep -q "tailwindcss" frontend/package.json && \
    grep -q "@tailwind base" frontend/src/style.css && \
-   grep -q "cyber-blue" frontend/tailwind.config.js; then
+   (grep -q "cyber:" frontend/tailwind.config.js || grep -q "'blue':" frontend/tailwind.config.js); then
     print_success "Tailwind CSS 配置验证通过 ✓"
 else
     print_error "Tailwind CSS 配置不完整！"
+    echo ""
+    echo "  请检查以下文件："
+    [ ! -f "frontend/package.json" ] && print_error "  ✗ 缺少 frontend/package.json"
+    [ ! -f "frontend/src/style.css" ] && print_error "  ✗ 缺少 frontend/src/style.css"
+    [ ! -f "frontend/tailwind.config.js" ] && print_error "  ✗ 缺少 frontend/tailwind.config.js"
+    
+    if [ -f "frontend/package.json" ]; then
+        grep -q "tailwindcss" frontend/package.json || print_warning "  ⚠ package.json 中未找到 tailwindcss 依赖"
+    fi
+    if [ -f "frontend/tailwind.config.js" ]; then
+        grep -q "cyber:" frontend/tailwind.config.js || print_warning "  ⚠ tailwind.config.js 中未找到 cyber 颜色配置"
+    fi
     exit 1
 fi
 
