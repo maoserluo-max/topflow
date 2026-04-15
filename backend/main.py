@@ -104,17 +104,17 @@ def crawler_diagnose():
     clients_to_test = [
         ('android', {
             'quiet': True, 'no_warnings': True, 'skip_download': True,
-            'nocheckcertificate': True, 'socket_timeout': 15, 'format': 'worst',
+            'nocheckcertificate': True, 'socket_timeout': 15,
             'extractor_args': {'youtube': {'player_client': ['android']}},
         }),
         ('ios', {
             'quiet': True, 'no_warnings': True, 'skip_download': True,
-            'nocheckcertificate': True, 'socket_timeout': 15, 'format': 'worst',
+            'nocheckcertificate': True, 'socket_timeout': 15,
             'extractor_args': {'youtube': {'player_client': ['ios']}},
         }),
         ('default', {
             'quiet': True, 'no_warnings': True, 'skip_download': True,
-            'nocheckcertificate': True, 'socket_timeout': 15, 'format': 'worst',
+            'nocheckcertificate': True, 'socket_timeout': 15,
         }),
     ]
 

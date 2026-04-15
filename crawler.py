@@ -18,7 +18,6 @@ class TopFlowCrawler:
             'nocheckcertificate': True,
             'socket_timeout': 30,
             'retries': 3,
-            'format': 'worst',
         }
 
         if proxy:
@@ -226,21 +225,6 @@ class TopFlowCrawler:
                     self.last_error = str(e2)
                     print(f"  ios客户端也失败: {str(e2)[:200]}")
                     self._cleanup_cookies(ios_opts)
-
-            if 'format' in error_str.lower():
-                print("\n💡 格式不可用，尝试使用更宽松的格式选项...")
-                try:
-                    fallback_opts = dict(opts)
-                    fallback_opts['format'] = 'worst/worstvideo+worstaudio/best'
-                    with yt_dlp.YoutubeDL(fallback_opts) as ydl:
-                        info = ydl.extract_info(video_url, download=False)
-                    result = _build_result(info)
-                    print(f"✅ 回退抓取成功: {result.get('influencer_name', 'N/A')}")
-                    self.last_error = None
-                    return result
-                except Exception as e2:
-                    self.last_error = str(e2)
-                    print(f"  回退也失败: {str(e2)[:200]}")
 
             return None
 
