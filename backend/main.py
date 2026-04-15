@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from config import settings
 from models import init_db
-from routers import auth, videos, admin
+from routers import auth, videos, admin, cookies
 
 
 @asynccontextmanager
@@ -71,6 +71,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(videos.router)
 app.include_router(admin.router)
+app.include_router(cookies.router)
 
 
 @app.get("/")
@@ -93,15 +94,11 @@ def health_check():
 def crawler_diagnose():
     import yt_dlp
     import platform
-    import os
     result = {
         "yt_dlp_version": yt_dlp.version.__version__,
         "python_version": platform.python_version(),
         "platform": platform.platform(),
     }
-    cookies_path = settings.COOKIES_FILE
-    result["cookies_file_configured"] = cookies_path
-    result["cookies_file_exists"] = os.path.exists(cookies_path) if cookies_path else False
 
     test_url = 'https://www.youtube.com/shorts/U9QPM3C9n7g'
     clients_to_test = [
@@ -122,8 +119,6 @@ def crawler_diagnose():
     ]
 
     for client_name, opts in clients_to_test:
-        if cookies_path and os.path.exists(cookies_path):
-            opts['cookiefile'] = cookies_path
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(test_url, download=False)

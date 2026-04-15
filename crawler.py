@@ -3,12 +3,12 @@ from typing import Dict, Optional
 import time
 import random
 import os
+import tempfile
 
 
 class TopFlowCrawler:
-    def __init__(self, proxy: str = None, cookies_file: str = None):
+    def __init__(self, proxy: str = None):
         self.proxy = proxy
-        self.cookies_file = cookies_file
         self.last_error = None
         self._base_opts = {
             'quiet': True,
@@ -24,7 +24,7 @@ class TopFlowCrawler:
         if proxy:
             self._base_opts['proxy'] = proxy
 
-    def _get_opts(self, url: str = '') -> dict:
+    def _get_opts(self, url: str = '', cookies_content: str = '') -> dict:
         opts = dict(self._base_opts)
         platform = self._detect_platform(url) if url else ''
 
@@ -40,10 +40,24 @@ class TopFlowCrawler:
         else:
             opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
-        if self.cookies_file and os.path.exists(self.cookies_file):
-            opts['cookiefile'] = self.cookies_file
+        if cookies_content and cookies_content.strip():
+            opts['cookiefile'] = self._write_temp_cookies(cookies_content)
 
         return opts
+
+    def _write_temp_cookies(self, content: str) -> str:
+        tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, prefix='ydl_cookies_')
+        tmp.write(content)
+        tmp.close()
+        return tmp.name
+
+    def _cleanup_cookies(self, opts: dict):
+        cookiefile = opts.get('cookiefile')
+        if cookiefile and os.path.exists(cookiefile) and 'ydl_cookies_' in cookiefile:
+            try:
+                os.unlink(cookiefile)
+            except Exception:
+                pass
 
     def _rate_limit(self):
         time.sleep(random.uniform(0.5, 1.5))
@@ -79,9 +93,9 @@ class TopFlowCrawler:
 
         raise last_error
 
-    def extract_influencer(self, homepage_url: str) -> Optional[Dict]:
+    def extract_influencer(self, homepage_url: str, cookies_content: str = '') -> Optional[Dict]:
         self._rate_limit()
-        opts = self._get_opts(homepage_url)
+        opts = self._get_opts(homepage_url, cookies_content)
 
         def _do_extract():
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -144,21 +158,17 @@ class TopFlowCrawler:
             print(f"\n[爬虫错误] 达人数据抓取失败")
             print(f"  URL: {homepage_url}")
             print(f"  原因: {error_str[:200]}")
-
-            if any(keyword in error_str.lower() for keyword in ['ssl', 'certificate', 'eof', 'remote end']):
-                print("\n💡 可能的原因:")
-                print("  • 网络连接不稳定，请稍后重试")
-                print("  • TikTok服务器暂时不可用")
-                print("  • 如频繁出现，建议使用代理/VPN")
-
             return None
 
-    def extract_video(self, video_url: str) -> Optional[Dict]:
+        finally:
+            self._cleanup_cookies(opts)
+
+    def extract_video(self, video_url: str, cookies_content: str = '') -> Optional[Dict]:
         self._rate_limit()
-        opts = self._get_opts(video_url)
+        opts = self._get_opts(video_url, cookies_content)
         platform = self._detect_platform(video_url)
         print(f"🔍 开始抓取视频: platform={platform}, url={video_url}")
-        print(f"   cookies: {opts.get('cookiefile', '无')}, player_client: {opts.get('extractor_args', {}).get('youtube', {}).get('player_client', 'default')}")
+        print(f"   cookies: {'有' if cookies_content and cookies_content.strip() else '无'}, player_client: {opts.get('extractor_args', {}).get('youtube', {}).get('player_client', 'default')}")
 
         def _do_extract():
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -203,35 +213,19 @@ class TopFlowCrawler:
                             }
                         },
                     })
-                    if self.cookies_file and os.path.exists(self.cookies_file):
-                        ios_opts['cookiefile'] = self.cookies_file
+                    if cookies_content and cookies_content.strip():
+                        ios_opts['cookiefile'] = self._write_temp_cookies(cookies_content)
                     with yt_dlp.YoutubeDL(ios_opts) as ydl:
                         info = ydl.extract_info(video_url, download=False)
                     result = _build_result(info)
                     print(f"✅ ios客户端抓取成功: {result.get('influencer_name', 'N/A')}")
                     self.last_error = None
+                    self._cleanup_cookies(ios_opts)
                     return result
                 except Exception as e2:
                     self.last_error = str(e2)
                     print(f"  ios客户端也失败: {str(e2)[:200]}")
-
-                if self.cookies_file and os.path.exists(self.cookies_file):
-                    print(f"\n💡 使用cookies重试...")
-                    try:
-                        cookie_opts = dict(self._base_opts)
-                        cookie_opts.update({
-                            'extract_flat': False,
-                            'cookiefile': self.cookies_file,
-                        })
-                        with yt_dlp.YoutubeDL(cookie_opts) as ydl:
-                            info = ydl.extract_info(video_url, download=False)
-                        result = _build_result(info)
-                        print(f"✅ cookies抓取成功: {result.get('influencer_name', 'N/A')}")
-                        self.last_error = None
-                        return result
-                    except Exception as e3:
-                        self.last_error = str(e3)
-                        print(f"  cookies重试也失败: {str(e3)[:200]}")
+                    self._cleanup_cookies(ios_opts)
 
             if 'format' in error_str.lower():
                 print("\n💡 格式不可用，尝试使用更宽松的格式选项...")
@@ -250,6 +244,9 @@ class TopFlowCrawler:
 
             return None
 
+        finally:
+            self._cleanup_cookies(opts)
+
     def _detect_platform(self, url: str) -> str:
         if 'tiktok.com' in url:
             return 'tiktok'
@@ -265,4 +262,4 @@ def create_crawler(proxy: str = None) -> TopFlowCrawler:
     return TopFlowCrawler(proxy=proxy)
 
 
-crawler = TopFlowCrawler()
+crawler = create_crawler()

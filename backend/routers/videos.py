@@ -14,11 +14,9 @@ import io
 from models import get_db, Video, User, OperationLog, UserRole, generate_video_code
 from auth import get_current_user, get_current_manager_or_admin, get_current_admin
 from schemas import VideoCreate, VideoUpdate, VideoResponse, CrawlerRequest, DashboardStats
-from config import settings
 
 router = APIRouter(prefix="/api/videos", tags=["视频管理"])
-crawler = TopFlowCrawler(cookies_file=settings.COOKIES_FILE)
-print(f"🔧 爬虫配置: cookies={settings.COOKIES_FILE}")
+crawler = TopFlowCrawler()
 
 
 @router.get("/generate-code")
@@ -305,13 +303,25 @@ async def fetch_metadata(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    print(f"🔍 开始抓取视频元数据: {request.url}")
+    from routers.cookies import get_effective_cookies_content
+
+    platform = 'youtube'
+    if 'tiktok.com' in request.url:
+        platform = 'tiktok'
+    elif 'instagram.com' in request.url:
+        platform = 'ins'
+
+    cookies_content = get_effective_cookies_content(current_user.id, platform, db)
+    print(f"🔍 开始抓取视频元数据: {request.url}, cookies: {'有' if cookies_content else '无'}({platform})")
+
     try:
-        data = await asyncio.to_thread(crawler.extract_video, request.url)
+        data = await asyncio.to_thread(crawler.extract_video, request.url, cookies_content)
         if not data:
             last_err = getattr(crawler, 'last_error', None) or ''
             print(f"❌ 抓取返回空数据: {request.url}, 错误: {last_err[:300]}")
             if last_err:
+                if 'sign in' in last_err.lower() or 'bot' in last_err.lower():
+                    raise HTTPException(status_code=400, detail="被识别为机器人，请在右上角菜单配置Cookies后重试")
                 raise HTTPException(status_code=400, detail=f"抓取失败: {last_err[:200]}")
             raise HTTPException(status_code=400, detail="无法获取视频数据，请检查链接是否正确或稍后重试")
 

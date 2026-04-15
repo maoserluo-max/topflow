@@ -115,6 +115,15 @@
             <div class="absolute right-0 mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 translate-y-2 group-hover:translate-y-0">
               <div class="glass-card p-2 space-y-1">
                 <button
+                  @click="showCookiesDialog"
+                  class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm dark:text-gray-300 dark:hover:text-white dark:hover:bg-white/5 text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Cookies管理
+                </button>
+                <button
                   @click="handleLogout"
                   class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors"
                 >
@@ -133,6 +142,8 @@
         <router-view />
       </main>
     </div>
+
+    <CookiesDialog ref="cookiesDialogRef" />
   </div>
 </template>
 
@@ -141,11 +152,13 @@ import { ref, computed, h } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
+import CookiesDialog from '@/components/CookiesDialog.vue'
 
 const route = useRoute()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
 const sidebarCollapsed = ref(false)
+const cookiesDialogRef = ref(null)
 
 const currentTitle = computed(() => route.meta.title || '仪表盘')
 
@@ -193,6 +206,10 @@ function getRoleClass(role) {
     user: 'bg-blue-500/10 text-blue-400'
   }
   return classes[role] || 'bg-gray-500/10 text-gray-400'
+}
+
+function showCookiesDialog() {
+  cookiesDialogRef.value?.open()
 }
 
 function handleLogout() {

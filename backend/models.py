@@ -79,6 +79,18 @@ class OperationLog(Base):
     user = relationship("User", back_populates="operation_logs")
 
 
+class PlatformCookies(Base):
+    __tablename__ = "platform_cookies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    platform = Column(String(20), nullable=False)
+    content = Column(Text, default="")
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+    user = relationship("User")
+
+
 def get_database_url():
     from config import settings
     url = settings.DATABASE_URL
