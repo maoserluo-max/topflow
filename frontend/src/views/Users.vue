@@ -243,7 +243,7 @@ const viewMode = ref('tree')
 const ROLE_HIERARCHY = { super_admin: 4, admin: 3, leader: 2, user: 1 }
 
 const currentUser = computed(() => userStore.user)
-const canCreateUser = computed(() => userStore.isAdmin)
+const canCreateUser = computed(() => userStore.canManageUsers)
 
 const activeUserCount = computed(() => users.value.filter(u => u.is_active).length)
 const adminCount = computed(() => users.value.filter(u => ['super_admin', 'admin'].includes(u.role)).length)

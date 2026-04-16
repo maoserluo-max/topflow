@@ -12,7 +12,7 @@ import csv
 import io
 
 from models import get_db, Video, User, OperationLog, UserRole, generate_video_code, ROLE_HIERARCHY
-from auth import get_current_user, get_current_leader_or_above, get_current_admin
+from auth import get_current_user, get_current_leader_or_above
 from schemas import VideoCreate, VideoUpdate, VideoResponse, CrawlerRequest, DashboardStats
 
 router = APIRouter(prefix="/api/videos", tags=["视频管理"])
@@ -147,7 +147,7 @@ def export_videos(
     status: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_leader_or_above),
     db: Session = Depends(get_db)
 ):
     query = db.query(Video)

@@ -5,7 +5,7 @@ from datetime import datetime
 import secrets
 
 from models import get_db, User, UserRole, OperationLog, InviteCode, ROLE_HIERARCHY
-from auth import verify_password, get_password_hash, create_access_token, get_current_user, get_current_admin, get_current_super_admin, get_current_leader_or_above, get_current_admin_or_leader
+from auth import verify_password, get_password_hash, create_access_token, get_current_user, get_current_super_admin, get_current_leader_or_above, get_current_admin_or_leader
 from schemas import UserCreate, UserUpdate, UserResponse, Token, LoginRequest, InviteCodeResponse, InviteCodeCreate, AdminUserCreate
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
@@ -77,8 +77,13 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     if db_email:
         raise HTTPException(status_code=400, detail="邮箱已被注册")
 
-    # 邀请码的注册角色 - 通过邀请码注册的用户统一为普通用户
+    # 邀请码的注册角色 - 使用邀请码指定的角色
     register_role = UserRole.USER
+    if invite.register_role:
+        try:
+            register_role = UserRole(invite.register_role)
+        except ValueError:
+            register_role = UserRole.USER
 
     # 邀请码的项目权限：继承创建者的项目（如果有指定则使用指定的）
     invite_creator = db.query(User).filter(User.id == invite.created_by).first()
@@ -158,13 +163,13 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 @router.get("/users")
 def get_users(
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_admin_or_leader),
     db: Session = Depends(get_db)
 ):
     if current_user.role == UserRole.SUPER_ADMIN:
         users = db.query(User).all()
     else:
-        # 管理员只能看到自己下属（包含自身）
+        # 管理员和组长只能看到自己下属（包含自身）
         subordinate_ids = _get_subordinate_ids(current_user, db)
         users = db.query(User).filter(User.id.in_(subordinate_ids)).all()
     return [_user_to_response(u, db) for u in users]
@@ -174,7 +179,7 @@ def get_users(
 def update_user(
     user_id: int,
     user_update: UserUpdate,
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_admin_or_leader),
     db: Session = Depends(get_db)
 ):
     db_user = db.query(User).filter(User.id == user_id).first()
@@ -189,8 +194,8 @@ def update_user(
     if current_user.role != UserRole.SUPER_ADMIN and db_user.role == UserRole.SUPER_ADMIN:
         raise HTTPException(status_code=403, detail="权限不足")
 
-    # 管理员只能修改自己的下属
-    if current_user.role == UserRole.ADMIN:
+    # 管理员和组长只能修改自己的下属
+    if current_user.role in [UserRole.ADMIN, UserRole.LEADER]:
         subordinate_ids = _get_subordinate_ids(current_user, db)
         if db_user.id not in subordinate_ids:
             raise HTTPException(status_code=403, detail="只能修改自己的下属用户")
@@ -232,7 +237,7 @@ def update_user(
 @router.delete("/users/{user_id}")
 def delete_user(
     user_id: int,
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_admin_or_leader),
     db: Session = Depends(get_db)
 ):
     db_user = db.query(User).filter(User.id == user_id).first()
@@ -246,8 +251,8 @@ def delete_user(
     if ROLE_HIERARCHY.get(db_user.role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
         raise HTTPException(status_code=403, detail="不能删除同级或更高级别的用户")
 
-    # 管理员只能删除自己的下属
-    if current_user.role == UserRole.ADMIN:
+    # 管理员和组长只能删除自己的下属
+    if current_user.role in [UserRole.ADMIN, UserRole.LEADER]:
         subordinate_ids = _get_subordinate_ids(current_user, db)
         if db_user.id not in subordinate_ids:
             raise HTTPException(status_code=403, detail="只能删除自己的下属用户")
@@ -276,7 +281,7 @@ def delete_user(
 @router.post("/users")
 def admin_create_user(
     user: AdminUserCreate,
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_admin_or_leader),
     db: Session = Depends(get_db)
 ):
     db_user = db.query(User).filter(User.username == user.username).first()
@@ -341,13 +346,15 @@ def _get_allowed_register_roles(current_user: User) -> list[str]:
         return ['admin', 'leader', 'user']
     elif current_user.role == UserRole.ADMIN:
         return ['leader', 'user']
+    elif current_user.role == UserRole.LEADER:
+        return ['user']
     return []
 
 
 @router.post("/invite-codes", response_model=InviteCodeResponse)
 def create_invite_code(
     code_data: InviteCodeCreate,
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_admin_or_leader),
     db: Session = Depends(get_db)
 ):
     # 验证注册角色权限
@@ -355,9 +362,14 @@ def create_invite_code(
     if code_data.register_role and code_data.register_role not in allowed_roles:
         raise HTTPException(status_code=403, detail=f"您只能生成注册角色为: {', '.join(allowed_roles)} 的邀请码")
 
-    # 管理员及以上默认所有项目
+    # 项目权限：未指定时，管理员及以上默认所有项目，组长继承自身项目
     if not code_data.projects:
-        code_data.projects = "Gamoji,Poseme,内容孵化"
+        if current_user.role in [UserRole.SUPER_ADMIN, UserRole.ADMIN]:
+            code_data.projects = "Gamoji,Poseme,内容孵化"
+        elif current_user.projects:
+            code_data.projects = current_user.projects
+        else:
+            code_data.projects = "Gamoji,Poseme,内容孵化"
 
     code = secrets.token_urlsafe(8).upper()[:8]
     invite = InviteCode(
@@ -386,7 +398,7 @@ def create_invite_code(
 def batch_create_invite_codes(
     code_data: InviteCodeCreate,
     count: int = 5,
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_admin_or_leader),
     db: Session = Depends(get_db)
 ):
     if count < 1 or count > 50:
@@ -398,7 +410,12 @@ def batch_create_invite_codes(
         raise HTTPException(status_code=403, detail=f"您只能生成注册角色为: {', '.join(allowed_roles)} 的邀请码")
 
     if not code_data.projects:
-        code_data.projects = "Gamoji,Poseme,内容孵化"
+        if current_user.role in [UserRole.SUPER_ADMIN, UserRole.ADMIN]:
+            code_data.projects = "Gamoji,Poseme,内容孵化"
+        elif current_user.projects:
+            code_data.projects = current_user.projects
+        else:
+            code_data.projects = "Gamoji,Poseme,内容孵化"
 
     codes = []
     for _ in range(count):
@@ -433,7 +450,7 @@ def get_invite_codes(
     page: int = 1,
     page_size: int = 20,
     is_used: bool = None,
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_admin_or_leader),
     db: Session = Depends(get_db)
 ):
     query = db.query(InviteCode).filter(InviteCode.created_by == current_user.id)
@@ -473,7 +490,7 @@ def get_invite_codes(
 @router.delete("/invite-codes/{code_id}")
 def delete_invite_code(
     code_id: int,
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_admin_or_leader),
     db: Session = Depends(get_db)
 ):
     invite = db.query(InviteCode).filter(InviteCode.id == code_id).first()

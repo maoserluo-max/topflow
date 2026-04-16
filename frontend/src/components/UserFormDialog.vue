@@ -170,28 +170,33 @@ const allRoles = [
   { value: 'user', label: '普通用户' }
 ]
 
-// 当前用户可以创建的角色：只能创建低于自身级别的角色（组长可创建下属组长和普通用户）
+// 当前用户可以创建的角色：只能创建低于自身级别的角色
 const availableRoles = computed(() => {
   const currentRole = userStore.user?.role || 'user'
   const currentLevel = ROLE_HIERARCHY[currentRole] || 1
   return allRoles.filter(r => ROLE_HIERARCHY[r.value] < currentLevel)
 })
 
-// 当前用户可以选择的项目（仅管理员使用，默认所有项目）
+// 当前用户可以选择的项目（管理员默认所有，组长只能分配自己拥有的项目）
 const availableProjects = computed(() => {
-  return ['Gamoji', 'Poseme', '内容孵化']
+  const currentRole = userStore.user?.role || 'user'
+  if (['super_admin', 'admin'].includes(currentRole)) {
+    return ['Gamoji', 'Poseme', '内容孵化']
+  }
+  // 组长只能分配自己拥有的项目
+  return userStore.userProjects
 })
 
-// 是否可以修改角色（仅管理员可修改）
+// 是否可以修改角色（组长及以上可修改）
 const canChangeRole = computed(() => {
   const currentRole = userStore.user?.role || 'user'
-  return ['super_admin', 'admin'].includes(currentRole)
+  return ['super_admin', 'admin', 'leader'].includes(currentRole)
 })
 
-// 是否可以修改项目权限（仅管理员可修改）
+// 是否可以修改项目权限（组长及以上可修改）
 const canChangeProjects = computed(() => {
   const currentRole = userStore.user?.role || 'user'
-  return ['super_admin', 'admin'].includes(currentRole)
+  return ['super_admin', 'admin', 'leader'].includes(currentRole)
 })
 
 const isAdminRole = computed(() => ['super_admin', 'admin'].includes(form.role))
@@ -210,15 +215,15 @@ function getRoleName(role) {
   return names[role] || role
 }
 
-// 新角色体系下，最低角色为组长，默认创建组长
+// 新角色体系下，默认创建普通用户
 const defaultForm = {
   username: '',
   email: '',
   full_name: '',
-  role: 'leader',
+  role: 'user',
   parent_id: null,
   password: '',
-  selectedProjects: ['Gamoji', 'Poseme', '内容孵化']
+  selectedProjects: [...userStore.userProjects]
 }
 
 const form = reactive({ ...defaultForm })

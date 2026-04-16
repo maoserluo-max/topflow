@@ -144,7 +144,7 @@ const filterUsed = ref(null)
 
 const ROLE_HIERARCHY = { super_admin: 4, admin: 3, leader: 2, user: 1 }
 
-// 根据当前用户角色确定可选的注册角色（仅管理员可生成邀请码）
+// 根据当前用户角色确定可选的注册角色（组长及以上可生成邀请码）
 const allowedRegisterRoles = computed(() => {
   const role = userStore.user?.role || 'user'
   if (role === 'super_admin') {
@@ -158,13 +158,21 @@ const allowedRegisterRoles = computed(() => {
       { value: 'leader', label: '组长' },
       { value: 'user', label: '普通用户' }
     ]
+  } else if (role === 'leader') {
+    return [
+      { value: 'user', label: '普通用户' }
+    ]
   }
   return []
 })
 
-// 当前用户可选择的项目（仅管理员可用，默认所有项目）
+// 当前用户可选择的项目（管理员默认所有，组长只能选自己的项目）
 const availableProjects = computed(() => {
-  return ['Gamoji', 'Poseme', '内容孵化']
+  const role = userStore.user?.role || 'user'
+  if (['super_admin', 'admin'].includes(role)) {
+    return ['Gamoji', 'Poseme', '内容孵化']
+  }
+  return userStore.userProjects
 })
 
 const isAdminRole = computed(() => ['super_admin', 'admin'].includes(newCode.register_role))
@@ -172,7 +180,7 @@ const isAdminRole = computed(() => ['super_admin', 'admin'].includes(newCode.reg
 const selectedProjects = ref(['Gamoji', 'Poseme', '内容孵化'])
 
 const newCode = reactive({
-  register_role: 'leader',
+  register_role: 'user',
   count: 1,
 })
 
@@ -184,7 +192,7 @@ watch(() => newCode.register_role, (val) => {
 })
 
 function open() {
-  selectedProjects.value = ['Gamoji', 'Poseme', '内容孵化']
+  selectedProjects.value = [...userStore.userProjects]
   newCode.register_role = 'user'
   visible.value = true
 }

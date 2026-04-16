@@ -10,6 +10,7 @@ export const useUserStore = defineStore('user', () => {
   const isSuperAdmin = computed(() => user.value?.role === 'super_admin')
   const isAdmin = computed(() => ['super_admin', 'admin'].includes(user.value?.role))
   const isLeaderOrAbove = computed(() => ['super_admin', 'admin', 'leader'].includes(user.value?.role))
+  const canManageUsers = computed(() => ['super_admin', 'admin', 'leader'].includes(user.value?.role))
   const userProjects = computed(() => {
     if (!user.value?.projects) return ['Gamoji', 'Poseme', '内容孵化']
     return user.value.projects.split(',').map(p => p.trim()).filter(p => p)
@@ -64,6 +65,7 @@ export const useUserStore = defineStore('user', () => {
     isSuperAdmin,
     isAdmin,
     isLeaderOrAbove,
+    canManageUsers,
     userProjects,
     login,
     register,

@@ -36,7 +36,7 @@ class User(Base):
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(100))
-    role = Column(SQLEnum(UserRole), default=UserRole.LEADER)
+    role = Column(SQLEnum(UserRole), default=UserRole.USER)
     parent_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     projects = Column(String(200), default="Gamoji,Poseme,内容孵化")
@@ -237,13 +237,12 @@ def init_db():
             conn.commit()
             print("✅ 已迁移 manager 角色到 leader")
 
-        # 新角色体系迁移：所有普通用户(user)提升为组长(leader)
+        # 新角色体系迁移：确保角色体系正确
+        # 普通用户(user)保持为普通用户，不再自动提升
         result = conn.execute(text("SELECT COUNT(*) FROM users WHERE role = 'user'"))
         user_count = result.fetchone()[0]
         if user_count > 0:
-            conn.execute(text("UPDATE users SET role = 'leader' WHERE role = 'user'"))
-            conn.commit()
-            print(f"✅ 已将 {user_count} 个普通用户提升为组长")
+            print(f"ℹ️ 当前有 {user_count} 个普通用户")
 
     with engine.connect() as conn:
         result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='invite_codes'"))

@@ -51,7 +51,7 @@ class UserCreate(UserBase):
 
 class AdminUserCreate(UserBase):
     password: str
-    role: Optional[str] = "leader"
+    role: Optional[str] = "user"
     parent_id: Optional[int] = None
     projects: Optional[str] = "Gamoji,Poseme,内容孵化"
 
@@ -76,7 +76,7 @@ class AdminUserCreate(UserBase):
 
 class InviteCodeCreate(BaseModel):
     projects: Optional[str] = None
-    register_role: Optional[str] = "leader"
+    register_role: Optional[str] = "user"
 
     @field_validator('register_role')
     @classmethod
@@ -93,7 +93,7 @@ class InviteCodeResponse(BaseModel):
     code: str
     created_by: int
     projects: Optional[str] = None
-    register_role: Optional[str] = "leader"
+    register_role: Optional[str] = "user"
     used_by: Optional[int] = None
     used_at: Optional[datetime] = None
     is_used: bool
