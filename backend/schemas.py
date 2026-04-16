@@ -30,6 +30,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    invite_code: str
 
     @field_validator('password')
     @classmethod
@@ -39,6 +40,26 @@ class UserCreate(UserBase):
         if len(v) > 72:
             raise ValueError('密码不能超过72个字符')
         return v
+
+    @field_validator('invite_code')
+    @classmethod
+    def validate_invite_code(cls, v):
+        if not v or not v.strip():
+            raise ValueError('邀请码不能为空')
+        return v.strip()
+
+
+class InviteCodeResponse(BaseModel):
+    id: int
+    code: str
+    created_by: int
+    used_by: Optional[int] = None
+    used_at: Optional[datetime] = None
+    is_used: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class UserUpdate(BaseModel):

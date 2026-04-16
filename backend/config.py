@@ -5,7 +5,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     APP_NAME: str = "顶流 TopFlow - 达人营销管理系统"
-    APP_VERSION: str = "1.0.0"
+    APP_VERSION: str = "2.0.0"
     
     DATABASE_URL: str = "sqlite:////app/data/topflow.db"
     SECRET_KEY: str = "topflow-secret-key-2024-change-me"

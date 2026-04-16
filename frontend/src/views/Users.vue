@@ -5,12 +5,20 @@
         <h1 class="text-4xl font-bold gradient-text">用户管理</h1>
         <p class="text-sm dark:text-gray-400 text-gray-500">管理系统用户账户、角色权限与状态</p>
       </div>
-      <button @click="showCreateDialog" class="cyber-button flex items-center gap-2 text-sm font-medium">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        新增用户
-      </button>
+      <div class="flex items-center gap-3">
+        <button @click="generateInviteCode" class="cyber-button flex items-center gap-2 text-sm font-medium !from-emerald-600 !to-teal-600 hover:!from-emerald-500 hover:!to-teal-500">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+          </svg>
+          生成邀请码
+        </button>
+        <button @click="showCreateDialog" class="cyber-button flex items-center gap-2 text-sm font-medium">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          新增用户
+        </button>
+      </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in">
@@ -197,6 +205,87 @@
       @close="dialogVisible = false"
       @submitted="onDialogSubmitted"
     />
+
+    <!-- 邀请码管理 -->
+    <div class="glass-card p-6 animate-in" style="animation-delay: 200ms">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-semibold flex items-center gap-2 dark:text-white text-gray-900">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          邀请码管理
+        </h3>
+        <div class="flex items-center gap-3">
+          <select v-model="inviteFilter" @change="fetchInviteCodes" class="px-3 py-1.5 rounded-lg text-sm dark:bg-white/5 dark:border-white/10 dark:text-white bg-white border border-gray-200 text-gray-700">
+            <option value="all">全部</option>
+            <option value="unused">未使用</option>
+            <option value="used">已使用</option>
+          </select>
+          <button @click="batchGenerateInviteCodes" class="cyber-button text-xs px-3 py-1.5 !from-emerald-600 !to-teal-600">
+            批量生成
+          </button>
+          <button @click="fetchInviteCodes" class="p-1.5 rounded-lg dark:hover:bg-white/5 hover:bg-gray-100 dark:text-gray-400 text-gray-500 transition-colors" title="刷新">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto scrollbar-hide">
+        <table class="data-table-modern">
+          <thead>
+            <tr>
+              <th>邀请码</th>
+              <th>状态</th>
+              <th>创建时间</th>
+              <th>使用者</th>
+              <th>使用时间</th>
+              <th class="text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="code in inviteCodes" :key="code.id" class="group">
+              <td>
+                <div class="flex items-center gap-2">
+                  <code class="px-2.5 py-1 rounded-lg text-sm font-mono font-bold dark:bg-primary-500/10 dark:text-primary-300 bg-primary-50 text-primary-600">{{ code.code }}</code>
+                  <button @click="copyCode(code.code)" class="p-1 rounded dark:hover:bg-white/10 hover:bg-gray-100 dark:text-gray-500 text-gray-400 transition-colors" title="复制">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                  </button>
+                </div>
+              </td>
+              <td>
+                <span v-if="code.is_used" class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold dark:bg-gray-500/15 dark:text-gray-400 bg-gray-100 text-gray-500">已使用</span>
+                <span v-else class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold dark:bg-emerald-500/15 dark:text-emerald-400 bg-emerald-50 text-emerald-600">未使用</span>
+              </td>
+              <td class="text-sm text-gray-500 whitespace-nowrap">{{ formatDate(code.created_at) }}</td>
+              <td class="text-sm dark:text-gray-400 text-gray-600">{{ code.used_by ? `用户#${code.used_by}` : '-' }}</td>
+              <td class="text-sm text-gray-500 whitespace-nowrap">{{ code.used_at ? formatDate(code.used_at) : '-' }}</td>
+              <td>
+                <div class="flex items-center justify-center">
+                  <button v-if="!code.is_used" @click="deleteInviteCode(code)" class="p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors opacity-0 group-hover:opacity-100" title="删除">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="inviteCodes.length === 0">
+              <td colspan="6" class="text-center py-12 dark:text-gray-500 text-gray-400">
+                <div class="space-y-2">
+                  <div class="text-4xl">🎫</div>
+                  <p>暂无邀请码</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-if="inviteTotal > invitePageSize" class="flex items-center justify-between mt-4 pt-4 dark:border-white/5 border-t border-gray-200">
+        <p class="text-sm dark:text-gray-500 text-gray-400">共 {{ inviteTotal }} 条</p>
+        <div class="flex items-center gap-2">
+          <button @click="invitePage > 1 && (invitePage--, fetchInviteCodes())" :disabled="invitePage <= 1" class="px-3 py-1.5 rounded-lg text-sm dark:bg-white/5 dark:hover:bg-white/10 dark:disabled:opacity-30 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 transition-colors">上一页</button>
+          <span class="text-sm dark:text-gray-400 text-gray-500">{{ invitePage }} / {{ invitePages }}</span>
+          <button @click="invitePage < invitePages && (invitePage++, fetchInviteCodes())" :disabled="invitePage >= invitePages" class="px-3 py-1.5 rounded-lg text-sm dark:bg-white/5 dark:hover:bg-white/10 dark:disabled:opacity-30 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 transition-colors">下一页</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -214,11 +303,20 @@ const dialogVisible = ref(false)
 const isEdit = ref(false)
 const editingUser = ref(null)
 
+// 邀请码相关
+const inviteCodes = ref([])
+const inviteTotal = ref(0)
+const invitePage = ref(1)
+const invitePageSize = ref(10)
+const invitePages = ref(0)
+const inviteFilter = ref('all')
+
 const activeUserCount = computed(() => users.value.filter(u => u.is_active).length)
 const adminCount = computed(() => users.value.filter(u => u.role === 'admin').length)
 
 onMounted(() => {
   fetchUsers()
+  fetchInviteCodes()
 })
 
 async function fetchUsers() {
@@ -299,5 +397,58 @@ function getRoleClass(role) {
     user: 'dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/25 bg-blue-50 text-blue-600 border border-blue-200'
   }
   return classes[role] || 'dark:bg-gray-500/15 dark:text-gray-400 dark:border-gray-500/25 bg-gray-100 text-gray-600 border border-gray-200'
+}
+
+// 邀请码相关函数
+async function fetchInviteCodes() {
+  try {
+    const params = { page: invitePage.value, page_size: invitePageSize.value }
+    if (inviteFilter.value === 'unused') params.is_used = false
+    else if (inviteFilter.value === 'used') params.is_used = true
+    const res = await api.get('/auth/invite-codes', { params })
+    inviteCodes.value = res.items || []
+    inviteTotal.value = res.total || 0
+    invitePages.value = res.pages || 0
+  } catch (error) {
+    console.error('Fetch invite codes error:', error)
+  }
+}
+
+async function generateInviteCode() {
+  try {
+    await api.post('/auth/invite-codes')
+    ElMessage.success('邀请码已生成')
+    fetchInviteCodes()
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || '生成失败')
+  }
+}
+
+async function batchGenerateInviteCodes() {
+  try {
+    const res = await api.post('/auth/invite-codes/batch?count=5')
+    ElMessage.success(`已生成 ${res.length} 个邀请码`)
+    fetchInviteCodes()
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || '批量生成失败')
+  }
+}
+
+async function deleteInviteCode(code) {
+  try {
+    await api.delete(`/auth/invite-codes/${code.id}`)
+    ElMessage.success('邀请码已删除')
+    fetchInviteCodes()
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || '删除失败')
+  }
+}
+
+function copyCode(code) {
+  navigator.clipboard.writeText(code).then(() => {
+    ElMessage.success('邀请码已复制到剪贴板')
+  }).catch(() => {
+    ElMessage.warning('复制失败，请手动复制')
+  })
 }
 </script>

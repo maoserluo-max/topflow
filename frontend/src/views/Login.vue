@@ -80,6 +80,12 @@
           <div v-if="loading" class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
           <span>{{ loading ? '登录中...' : '登 录' }}</span>
         </button>
+
+        <div class="text-center">
+          <router-link to="/register" class="text-sm dark:text-gray-400 text-gray-500 hover:text-cyber-blue dark:hover:text-cyber-blue transition-colors">
+            没有账号？注册新账号
+          </router-link>
+        </div>
       </div>
 
       <div class="mt-8 text-center">

@@ -91,6 +91,21 @@ class PlatformCookies(Base):
     user = relationship("User")
 
 
+class InviteCode(Base):
+    __tablename__ = "invite_codes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(20), unique=True, index=True, nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    used_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    used_at = Column(DateTime, nullable=True)
+    is_used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=_utcnow)
+
+    creator = relationship("User", foreign_keys=[created_by])
+    used_user = relationship("User", foreign_keys=[used_by])
+
+
 def get_database_url():
     from config import settings
     url = settings.DATABASE_URL
@@ -183,5 +198,23 @@ def init_db():
             conn.execute(text("ALTER TABLE users ADD COLUMN projects VARCHAR(200) DEFAULT 'Gamoji,Poseme,内容孵化'"))
             conn.commit()
             print("✅ 已添加 projects 列")
+
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='invite_codes'"))
+        if not result.fetchone():
+            conn.execute(text("""
+                CREATE TABLE invite_codes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    code VARCHAR(20) NOT NULL UNIQUE,
+                    created_by INTEGER NOT NULL REFERENCES users(id),
+                    used_by INTEGER REFERENCES users(id),
+                    used_at DATETIME,
+                    is_used BOOLEAN DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_invite_codes_code ON invite_codes (code)"))
+            conn.commit()
+            print("✅ 已创建 invite_codes 表")
 
     print(f"✅ 数据库已初始化: {DATABASE_URL}")
