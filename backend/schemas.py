@@ -112,6 +112,15 @@ class UserUpdate(BaseModel):
     projects: Optional[str] = None
     password: Optional[str] = None
 
+    @field_validator('role')
+    @classmethod
+    def validate_role(cls, v):
+        if v is not None:
+            valid_roles = ['admin', 'leader', 'user']
+            if v not in valid_roles:
+                raise ValueError(f'无效的角色，可选值: {", ".join(valid_roles)}')
+        return v
+
     @field_validator('password')
     @classmethod
     def validate_password(cls, v):
@@ -136,25 +145,6 @@ class ProfileUpdate(BaseModel):
                 raise ValueError('密码至少6个字符')
             if len(v) > 72:
                 raise ValueError('密码不能超过72个字符')
-        return v
-
-    @field_validator('role')
-    @classmethod
-    def validate_role(cls, v):
-        if v is not None:
-            valid_roles = ['admin', 'leader', 'user']
-            if v not in valid_roles:
-                raise ValueError(f'无效的角色，可选值: {", ".join(valid_roles)}')
-        return v
-
-    @field_validator('projects')
-    @classmethod
-    def validate_projects(cls, v):
-        if v is not None:
-            valid_projects = ['Gamoji', 'Poseme', '内容孵化']
-            for p in v.split(','):
-                if p.strip() and p.strip() not in valid_projects:
-                    raise ValueError(f'无效的项目，可选值: {", ".join(valid_projects)}')
         return v
 
 
