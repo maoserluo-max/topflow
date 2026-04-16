@@ -213,7 +213,7 @@ const menuItems = computed(() => {
 })
 
 function getRoleName(role) {
-  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '用户' }
+  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '普通用户' }
   return names[role] || role
 }
 

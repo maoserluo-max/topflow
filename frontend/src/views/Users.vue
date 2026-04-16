@@ -21,7 +21,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 animate-in">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 animate-in">
       <div class="stat-card-glow group cursor-pointer hover:scale-[1.02] transition-transform duration-300">
         <div class="flex items-center justify-between">
           <div class="space-y-3">
@@ -50,6 +50,17 @@
             <div>
               <p class="text-xs dark:text-gray-400 text-gray-500 uppercase tracking-wider font-medium">组长</p>
               <p class="text-3xl font-bold mt-1 bg-gradient-to-r from-amber-400 to-orange-300 bg-clip-text text-transparent">{{ leaderCount }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card-glow group cursor-pointer hover:scale-[1.02] transition-transform duration-300">
+        <div class="flex items-center justify-between">
+          <div class="space-y-3">
+            <div>
+              <p class="text-xs dark:text-gray-400 text-gray-500 uppercase tracking-wider font-medium">普通用户</p>
+              <p class="text-3xl font-bold mt-1 bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">{{ userCount }}</p>
             </div>
           </div>
         </div>
@@ -339,6 +350,7 @@ const canCreateUser = computed(() => userStore.isLeaderOrAbove)
 const activeUserCount = computed(() => users.value.filter(u => u.is_active).length)
 const adminCount = computed(() => users.value.filter(u => ['super_admin', 'admin'].includes(u.role)).length)
 const leaderCount = computed(() => users.value.filter(u => u.role === 'leader').length)
+const userCount = computed(() => users.value.filter(u => u.role === 'user').length)
 
 // 邀请码相关
 const inviteCodes = ref([])
@@ -470,7 +482,7 @@ async function fetchInviteCodes() {
 
 async function generateInviteCode() {
   try {
-    const data = { register_role: 'user' }
+    const data = { register_role: 'leader' }
     // 组长的邀请码继承自己的项目
     if (currentUser.value?.role === 'leader') {
       data.projects = currentUser.value.projects
@@ -485,7 +497,7 @@ async function generateInviteCode() {
 
 async function batchGenerateInviteCodes() {
   try {
-    const data = { register_role: 'user' }
+    const data = { register_role: 'leader' }
     if (currentUser.value?.role === 'leader') {
       data.projects = currentUser.value.projects
     }

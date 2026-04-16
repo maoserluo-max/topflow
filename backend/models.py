@@ -36,7 +36,7 @@ class User(Base):
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(100))
-    role = Column(SQLEnum(UserRole), default=UserRole.USER)
+    role = Column(SQLEnum(UserRole), default=UserRole.LEADER)
     parent_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     projects = Column(String(200), default="Gamoji,Poseme,内容孵化")
@@ -111,7 +111,7 @@ class InviteCode(Base):
     code = Column(String(20), unique=True, index=True, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     projects = Column(String(200))
-    register_role = Column(String(20), default="user")
+    register_role = Column(String(20), default="leader")
     used_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     used_at = Column(DateTime, nullable=True)
     is_used = Column(Boolean, default=False)
@@ -236,6 +236,14 @@ def init_db():
             conn.execute(text("UPDATE users SET role = 'leader' WHERE role = 'manager'"))
             conn.commit()
             print("✅ 已迁移 manager 角色到 leader")
+
+        # 新角色体系迁移：所有普通用户(user)提升为组长(leader)
+        result = conn.execute(text("SELECT COUNT(*) FROM users WHERE role = 'user'"))
+        user_count = result.fetchone()[0]
+        if user_count > 0:
+            conn.execute(text("UPDATE users SET role = 'leader' WHERE role = 'user'"))
+            conn.commit()
+            print(f"✅ 已将 {user_count} 个普通用户提升为组长")
 
     with engine.connect() as conn:
         result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='invite_codes'"))

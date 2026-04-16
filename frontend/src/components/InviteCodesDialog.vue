@@ -159,8 +159,9 @@ const allowedRegisterRoles = computed(() => {
       { value: 'user', label: '普通用户' }
     ]
   } else {
-    // 组长只能邀请普通用户
+    // 组长可邀请下属组长或普通用户
     return [
+      { value: 'leader', label: '组长' },
       { value: 'user', label: '普通用户' }
     ]
   }
@@ -182,7 +183,7 @@ const isAdminRole = computed(() => ['super_admin', 'admin'].includes(newCode.reg
 const selectedProjects = ref(['Gamoji', 'Poseme', '内容孵化'])
 
 const newCode = reactive({
-  register_role: 'user',
+  register_role: 'leader',
   count: 1,
 })
 
@@ -201,7 +202,7 @@ function open() {
   } else {
     selectedProjects.value = ['Gamoji', 'Poseme', '内容孵化']
   }
-  newCode.register_role = 'user'
+  newCode.register_role = 'leader'
   visible.value = true
 }
 
@@ -271,7 +272,7 @@ function copyCode(code) {
 }
 
 function getRoleName(role) {
-  const names = { admin: '管理员', leader: '组长', user: '普通用户' }
+  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '普通用户' }
   return names[role] || role || '普通用户'
 }
 

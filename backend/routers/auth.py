@@ -89,10 +89,10 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     else:
         new_projects = "Gamoji,Poseme,内容孵化"
 
-    # 组长只能创建普通用户邀请码，验证注册角色合法性
+    # 组长只能创建下属组长或普通用户邀请码，验证注册角色合法性
     if invite_creator and invite_creator.role == UserRole.LEADER:
-        if register_role != UserRole.USER:
-            raise HTTPException(status_code=400, detail="组长只能邀请普通用户")
+        if register_role not in [UserRole.LEADER, UserRole.USER]:
+            raise HTTPException(status_code=400, detail="组长只能邀请组长或普通用户")
 
     new_user = User(
         username=user.username,
@@ -194,7 +194,7 @@ def update_user(
     if current_user.role != UserRole.SUPER_ADMIN and db_user.role == UserRole.SUPER_ADMIN:
         raise HTTPException(status_code=403, detail="权限不足")
 
-    # 组长只能修改自己的下属普通用户
+    # 组长只能修改自己的下属（组长或普通用户）
     if current_user.role == UserRole.LEADER:
         subordinate_ids = _get_subordinate_ids(current_user, db)
         if db_user.id not in subordinate_ids:
@@ -206,14 +206,21 @@ def update_user(
         # 不能将用户角色提升到等于或高于自身
         if ROLE_HIERARCHY.get(new_role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
             raise HTTPException(status_code=403, detail="不能将用户角色提升到等于或高于自身级别")
-        # 组长不能修改角色（只能管理员及以上修改角色）
-        if current_user.role == UserRole.LEADER:
-            raise HTTPException(status_code=403, detail="组长无权修改用户角色")
+        # 组长只能在 leader 和 user 之间切换下属角色
+        if current_user.role == UserRole.LEADER and new_role not in [UserRole.LEADER, UserRole.USER]:
+            raise HTTPException(status_code=403, detail="组长只能将下属设为组长或普通用户")
         update_data["role"] = new_role
 
-    # 组长不能修改用户项目权限
+    # 组长修改项目权限时，不能超出自身拥有的项目
     if current_user.role == UserRole.LEADER and "projects" in update_data:
-        raise HTTPException(status_code=403, detail="组长无权修改用户项目权限")
+        leader_projects = set()
+        if current_user.projects:
+            leader_projects = {p.strip() for p in current_user.projects.split(',') if p.strip()}
+        if update_data["projects"]:
+            requested = {p.strip() for p in update_data["projects"].split(',') if p.strip()}
+            invalid = requested - leader_projects
+            if invalid:
+                raise HTTPException(status_code=403, detail=f"您无权分配以下项目: {', '.join(invalid)}")
 
     # 验证 parent_id 有效性
     if "parent_id" in update_data and update_data["parent_id"] is not None:
@@ -258,7 +265,7 @@ def delete_user(
     if ROLE_HIERARCHY.get(db_user.role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
         raise HTTPException(status_code=403, detail="不能删除同级或更高级别的用户")
 
-    # 组长只能删除自己的下属普通用户
+    # 组长只能删除自己的下属（组长或普通用户）
     if current_user.role == UserRole.LEADER:
         subordinate_ids = _get_subordinate_ids(current_user, db)
         if db_user.id not in subordinate_ids:
@@ -304,9 +311,9 @@ def admin_create_user(
     if ROLE_HIERARCHY.get(new_role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
         raise HTTPException(status_code=403, detail="不能创建等于或高于自身级别的用户")
 
-    # 组长只能创建普通用户
-    if current_user.role == UserRole.LEADER and new_role != UserRole.USER:
-        raise HTTPException(status_code=403, detail="组长只能创建普通用户")
+    # 组长可创建下属组长或普通用户
+    if current_user.role == UserRole.LEADER and new_role not in [UserRole.LEADER, UserRole.USER]:
+        raise HTTPException(status_code=403, detail="组长只能创建下属组长或普通用户")
 
     # 验证 parent_id
     parent_id = user.parent_id
@@ -333,6 +340,7 @@ def admin_create_user(
             final_projects = ','.join(sorted(allowed)) if allowed else current_user.projects
         else:
             final_projects = current_user.projects
+        # 组长创建下属组长时，下属组长项目不能超过自身
     else:
         final_projects = user.projects
 
@@ -370,7 +378,7 @@ def _get_allowed_register_roles(current_user: User) -> list[str]:
     elif current_user.role == UserRole.ADMIN:
         return ['leader', 'user']
     elif current_user.role == UserRole.LEADER:
-        return ['user']
+        return ['leader', 'user']
     return []
 
 
@@ -408,7 +416,7 @@ def create_invite_code(
         code=code,
         created_by=current_user.id,
         projects=code_data.projects,
-        register_role=code_data.register_role or "user",
+        register_role=code_data.register_role or "leader",
         is_used=False
     )
     db.add(invite)
@@ -465,7 +473,7 @@ def batch_create_invite_codes(
             code=code,
             created_by=current_user.id,
             projects=code_data.projects,
-            register_role=code_data.register_role or "user",
+            register_role=code_data.register_role or "leader",
             is_used=False
         )
         db.add(invite)

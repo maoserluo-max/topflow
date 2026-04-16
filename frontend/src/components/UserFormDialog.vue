@@ -170,7 +170,7 @@ const allRoles = [
   { value: 'user', label: '普通用户' }
 ]
 
-// 当前用户可以创建的角色：只能创建低于自身级别的角色
+// 当前用户可以创建的角色：只能创建低于自身级别的角色（组长可创建下属组长和普通用户）
 const availableRoles = computed(() => {
   const currentRole = userStore.user?.role || 'user'
   const currentLevel = ROLE_HIERARCHY[currentRole] || 1
@@ -187,16 +187,16 @@ const availableProjects = computed(() => {
   return userStore.userProjects.length > 0 ? userStore.userProjects : ['Gamoji', 'Poseme', '内容孵化']
 })
 
-// 是否可以修改角色（组长不能修改角色）
+// 是否可以修改角色（组长也可以修改下属角色）
 const canChangeRole = computed(() => {
   const currentRole = userStore.user?.role || 'user'
-  return ['super_admin', 'admin'].includes(currentRole)
+  return ['super_admin', 'admin', 'leader'].includes(currentRole)
 })
 
-// 是否可以修改项目权限（组长不能修改项目权限）
+// 是否可以修改项目权限（组长可修改下属项目权限，但限制在自身项目范围内）
 const canChangeProjects = computed(() => {
   const currentRole = userStore.user?.role || 'user'
-  return ['super_admin', 'admin'].includes(currentRole)
+  return ['super_admin', 'admin', 'leader'].includes(currentRole)
 })
 
 const isAdminRole = computed(() => ['super_admin', 'admin'].includes(form.role))
@@ -215,11 +215,12 @@ function getRoleName(role) {
   return names[role] || role
 }
 
+// 新角色体系下，最低角色为组长，默认创建组长
 const defaultForm = {
   username: '',
   email: '',
   full_name: '',
-  role: 'user',
+  role: 'leader',
   parent_id: null,
   password: '',
   selectedProjects: ['Gamoji', 'Poseme', '内容孵化']
