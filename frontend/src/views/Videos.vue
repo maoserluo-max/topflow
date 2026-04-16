@@ -307,8 +307,8 @@
                     <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">基本信息</h3>
                   </div>
                   <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div class="detail-field"><span class="detail-label">视频编号</span><span class="detail-value font-mono dark:text-cyber-blue text-primary-600">{{ detailData?.video_code || '-' }}</span></div>
                     <div class="detail-field"><span class="detail-label">项目</span><span class="detail-value"><span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold dark:bg-primary-500/15 dark:text-primary-300 dark:border dark:border-primary-500/25 bg-primary-50 text-primary-600 border border-primary-200">{{ detailData?.project || '-' }}</span></span></div>
+                    <div class="detail-field"><span class="detail-label">视频编号</span><span class="detail-value font-mono dark:text-cyber-blue text-primary-600">{{ detailData?.video_code || '-' }}</span></div>
                     <div class="detail-field"><span class="detail-label">内容方向</span><span class="detail-value">{{ detailData?.content_direction || '-' }}</span></div>
                     <div class="detail-field"><span class="detail-label">价格</span><span class="detail-value text-cyber-green font-semibold">${{ detailData?.price_usd || '0' }}</span></div>
                     <div class="detail-field"><span class="detail-label">负责人</span><span class="detail-value">{{ detailData?.contact_person || '-' }}</span></div>
@@ -333,8 +333,8 @@
                     <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">属性信息</h3>
                   </div>
                   <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div class="detail-field"><span class="detail-label">平台</span><span class="detail-value">{{ detailData?.platform?.toUpperCase() || '-' }}</span></div>
                     <div class="detail-field"><span class="detail-label">地区</span><span class="detail-value">{{ getRegionName(detailData?.region) }}</span></div>
+                    <div class="detail-field"><span class="detail-label">平台</span><span class="detail-value">{{ detailData?.platform?.toUpperCase() || '-' }}</span></div>
                     <div class="detail-field"><span class="detail-label">达人名称</span><span class="detail-value">{{ detailData?.influencer_name || '-' }}</span></div>
                     <div class="detail-field"><span class="detail-label">邮箱</span><span class="detail-value">{{ detailData?.contact_email || '-' }}</span></div>
                     <div class="detail-field"><span class="detail-label">WhatsApp</span><span class="detail-value">{{ detailData?.contact_whatsapp || '-' }}</span></div>
@@ -612,13 +612,14 @@ async function refreshVideoStats(video) {
     if (response.comment_count !== undefined) updateData.comment_count = response.comment_count
     if (response.share_count !== undefined) updateData.share_count = response.share_count
 
-    if (Object.keys(updateData).length > 0) {
-      updateData.stats_updated_at = new Date().toISOString()
-      await api.put(`/videos/${video.id}`, updateData)
-      Object.assign(video, updateData)
+    // 始终更新 stats_updated_at，表示最后一次获取播放数据的时间
+    updateData.stats_updated_at = new Date().toISOString()
+    await api.put(`/videos/${video.id}`, updateData)
+    Object.assign(video, updateData)
+    if (Object.keys(updateData).length > 1) {
       ElMessage.success('数据刷新成功')
     } else {
-      ElMessage.info('未获取到新的播放数据')
+      ElMessage.info('未获取到新的播放数据，已更新刷新时间')
     }
   } catch (error) {
     const msg = error?.response?.data?.detail || '刷新失败'

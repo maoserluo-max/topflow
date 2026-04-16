@@ -66,6 +66,16 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div class="space-y-1.5">
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">项目 *</label>
+                    <select
+                      v-model="form.project"
+                      required
+                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+                    >
+                      <option v-for="p in availableProjects" :key="p" :value="p" class="dark:bg-gray-900 bg-white">{{ p }}</option>
+                    </select>
+                  </div>
+                  <div class="space-y-1.5">
                     <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">视频编号</label>
                     <div class="flex gap-2">
                       <input
@@ -89,16 +99,6 @@
                     <p v-if="!isEdit && form.video_code" class="text-xs dark:text-gray-600 text-gray-400">可手动修改编号</p>
                   </div>
                   <div class="space-y-1.5">
-                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">项目 *</label>
-                    <select
-                      v-model="form.project"
-                      required
-                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
-                    >
-                      <option v-for="p in availableProjects" :key="p" :value="p" class="dark:bg-gray-900 bg-white">{{ p }}</option>
-                    </select>
-                  </div>
-                  <div class="space-y-1.5">
                     <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">内容方向</label>
                     <div class="flex gap-2">
                       <select
@@ -118,6 +118,24 @@
                       placeholder="输入自定义内容方向"
                       class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
                     />
+                    <!-- 管理员可管理内容方向选项 -->
+                    <div v-if="isAdmin" class="flex flex-wrap gap-1.5 mt-1">
+                      <span
+                        v-for="d in allDirectionOptions"
+                        :key="d"
+                        class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium dark:bg-white/5 dark:text-gray-300 bg-gray-50 text-gray-600 dark:border dark:border-white/10 border border-gray-200"
+                        :class="{ 'opacity-50': defaultDirectionOptions.includes(d) }"
+                      >
+                        {{ d }}
+                        <button
+                          v-if="!defaultDirectionOptions.includes(d)"
+                          @click="removeDirectionOption(d)"
+                          type="button"
+                          class="dark:text-red-400 text-red-500 hover:text-red-600 dark:hover:text-red-300 ml-0.5"
+                          title="删除此选项"
+                        >×</button>
+                      </span>
+                    </div>
                   </div>
                   <div class="space-y-1.5">
                     <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">价格 (USD)</label>
@@ -207,6 +225,16 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div class="space-y-1.5">
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">地区</label>
+                    <select
+                      v-model="form.region"
+                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all"
+                    >
+                      <option value="" class="dark:bg-gray-900 bg-white">选择地区</option>
+                      <option v-for="r in regionOptions" :key="r.value" :value="r.value" class="dark:bg-gray-900 bg-white">{{ r.label }}</option>
+                    </select>
+                  </div>
+                  <div class="space-y-1.5">
                     <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">平台 *</label>
                     <select
                       v-model="form.platform"
@@ -215,16 +243,6 @@
                       <option value="tiktok" class="dark:bg-gray-900 bg-white">TikTok</option>
                       <option value="ins" class="dark:bg-gray-900 bg-white">Instagram</option>
                       <option value="youtube" class="dark:bg-gray-900 bg-white">YouTube</option>
-                    </select>
-                  </div>
-                  <div class="space-y-1.5">
-                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">地区</label>
-                    <select
-                      v-model="form.region"
-                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all"
-                    >
-                      <option value="" class="dark:bg-gray-900 bg-white">选择地区</option>
-                      <option v-for="r in regionOptions" :key="r.value" :value="r.value" class="dark:bg-gray-900 bg-white">{{ r.label }}</option>
                     </select>
                   </div>
                   <div class="space-y-1.5">
@@ -356,7 +374,7 @@ const regionOptions = [
   { value: 'JP', label: '日本 (JP)' }
 ]
 
-const defaultDirectionOptions = ['Free Fire', 'Mobile Legends']
+const defaultDirectionOptions = ['FF', 'MLBB']
 
 // 视频类型预设选项
 const defaultVideoTypeOptions = ['高光混剪', '游戏解说', '纯画面展示', '特效/卡点', '真人', '剧情', '整蛊']
@@ -367,6 +385,17 @@ const allVideoTypeOptions = ref([...defaultVideoTypeOptions])
 
 const directionOptions = computed(() => allDirectionOptions.value)
 const videoTypeOptions = computed(() => allVideoTypeOptions.value)
+
+const isAdmin = computed(() => userStore.user?.role === 'admin')
+
+function removeDirectionOption(option) {
+  allDirectionOptions.value = allDirectionOptions.value.filter(d => d !== option)
+  // 如果当前选中的是被删除的选项，重置选择
+  if (contentDirectionSelect.value === option) {
+    contentDirectionSelect.value = ''
+    form.content_direction = ''
+  }
+}
 
 const statusOptions = [
   { value: 'pending_review', label: '待审核' },

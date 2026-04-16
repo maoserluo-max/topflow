@@ -214,6 +214,14 @@ def init_db():
             conn.commit()
             print("✅ 已添加 stats_updated_at 列")
 
+        # 为已有视频补充 stats_updated_at：使用 created_at 作为默认值
+        result = conn.execute(text("SELECT COUNT(*) FROM videos WHERE stats_updated_at IS NULL"))
+        null_count = result.fetchone()[0]
+        if null_count > 0:
+            conn.execute(text("UPDATE videos SET stats_updated_at = created_at WHERE stats_updated_at IS NULL"))
+            conn.commit()
+            print(f"✅ 已为 {null_count} 条视频补充 stats_updated_at")
+
         result = conn.execute(text("PRAGMA table_info(users)"))
         existing_columns = {row[1] for row in result}
         if 'projects' not in existing_columns:

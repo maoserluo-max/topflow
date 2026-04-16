@@ -99,6 +99,100 @@
       </div>
     </div>
 
+    <div class="glass-card p-6 animate-in" style="animation-delay: 350ms">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-semibold flex items-center gap-2 dark:text-white text-gray-900">
+          <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          用户交付数据
+        </h3>
+      </div>
+
+      <div class="overflow-x-auto scrollbar-hide">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="dark:text-gray-400 text-gray-500 text-xs uppercase tracking-wider">
+              <th class="text-left py-3 px-2 font-medium">用户</th>
+              <th class="text-right py-3 px-2 font-medium">视频数</th>
+              <th class="text-right py-3 px-2 font-medium">金额($)</th>
+              <th class="text-right py-3 px-2 font-medium">CPM</th>
+              <th class="text-right py-3 px-2 font-medium">播放数</th>
+              <th class="text-right py-3 px-2 font-medium">点赞数</th>
+              <th class="text-right py-3 px-2 font-medium">评论数</th>
+              <th class="text-right py-3 px-2 font-medium">转发数</th>
+              <th class="text-right py-3 px-2 font-medium">视频均价</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="node in deliveryData" :key="node.id">
+              <!-- 自身行 -->
+              <tr class="group dark:hover:bg-white/5 hover:bg-gray-50 transition-colors">
+                <td class="py-3 px-2 font-medium dark:text-white text-gray-900 whitespace-nowrap">
+                  <div class="flex items-center gap-2">
+                    <span
+                      v-if="node.children && node.children.length > 0"
+                      @click="toggleExpand(node.id)"
+                      class="cursor-pointer dark:text-gray-400 text-gray-500 hover:text-primary-500 transition-colors"
+                    >
+                      <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-90': expandedNodes.has(node.id) }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </span>
+                    <span v-else class="w-4 inline-block"></span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                      :class="node.is_leader ? 'dark:bg-amber-500/15 dark:text-amber-400 bg-amber-50 text-amber-600' : 'dark:bg-blue-500/15 dark:text-blue-400 bg-blue-50 text-blue-600'"
+                    >{{ node.name }}</span>
+                  </div>
+                </td>
+                <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ node.video_count }}</td>
+                <td class="text-right py-3 px-2 font-mono text-cyber-green">${{ node.total_amount?.toFixed(2) || '0.00' }}</td>
+                <td class="text-right py-3 px-2 font-mono dark:text-pink-400 text-pink-600">{{ node.cpm?.toFixed(2) || '0.00' }}</td>
+                <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(node.total_plays) }}</td>
+                <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(node.total_likes) }}</td>
+                <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(node.total_comments) }}</td>
+                <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(node.total_shares) }}</td>
+                <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">${{ node.avg_price?.toFixed(2) || '0.00' }}</td>
+              </tr>
+              <!-- 汇总行（组长/管理员的含组员汇总） -->
+              <tr v-if="node.is_leader && node._sum_video_count !== undefined && expandedNodes.has(node.id)" class="dark:bg-amber-500/5 bg-amber-50/50">
+                <td class="py-2 px-2 text-xs dark:text-amber-400 text-amber-600 font-medium whitespace-nowrap">
+                  <span class="ml-6">↳ 组内合计</span>
+                </td>
+                <td class="text-right py-2 px-2 font-mono text-xs dark:text-amber-300 text-amber-600 font-medium">{{ node._sum_video_count }}</td>
+                <td class="text-right py-2 px-2 font-mono text-xs text-cyber-green font-medium">${{ node._sum_total_amount?.toFixed(2) || '0.00' }}</td>
+                <td class="text-right py-2 px-2 font-mono text-xs dark:text-pink-400 text-pink-600 font-medium">{{ node._sum_cpm?.toFixed(2) || '0.00' }}</td>
+                <td class="text-right py-2 px-2 font-mono text-xs dark:text-amber-300 text-amber-600 font-medium">{{ formatNumber(node._sum_total_plays) }}</td>
+                <td class="text-right py-2 px-2 font-mono text-xs dark:text-amber-300 text-amber-600 font-medium">{{ formatNumber(node._sum_total_likes) }}</td>
+                <td class="text-right py-2 px-2 font-mono text-xs dark:text-amber-300 text-amber-600 font-medium">{{ formatNumber(node._sum_total_comments) }}</td>
+                <td class="text-right py-2 px-2 font-mono text-xs dark:text-amber-300 text-amber-600 font-medium">{{ formatNumber(node._sum_total_shares) }}</td>
+                <td class="text-right py-2 px-2 font-mono text-xs dark:text-amber-300 text-amber-600 font-medium">${{ node._sum_avg_price?.toFixed(2) || '0.00' }}</td>
+              </tr>
+              <!-- 子节点 -->
+              <template v-if="node.children && node.children.length > 0 && expandedNodes.has(node.id)">
+                <template v-for="child in node.children" :key="child.id">
+                  <tr class="group dark:hover:bg-white/5 hover:bg-gray-50 transition-colors">
+                    <td class="py-3 px-2 font-medium dark:text-white text-gray-900 whitespace-nowrap">
+                      <div class="flex items-center gap-2 ml-6">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium dark:bg-blue-500/15 dark:text-blue-400 bg-blue-50 text-blue-600">{{ child.name }}</span>
+                      </div>
+                    </td>
+                    <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ child.video_count }}</td>
+                    <td class="text-right py-3 px-2 font-mono text-cyber-green">${{ child.total_amount?.toFixed(2) || '0.00' }}</td>
+                    <td class="text-right py-3 px-2 font-mono dark:text-pink-400 text-pink-600">{{ child.cpm?.toFixed(2) || '0.00' }}</td>
+                    <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(child.total_plays) }}</td>
+                    <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(child.total_likes) }}</td>
+                    <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(child.total_comments) }}</td>
+                    <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(child.total_shares) }}</td>
+                    <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">${{ child.avg_price?.toFixed(2) || '0.00' }}</td>
+                  </tr>
+                </template>
+              </template>
+            </template>
+            <tr v-if="deliveryData.length === 0">
+              <td colspan="9" class="text-center py-8 dark:text-gray-500 text-gray-400">暂无数据</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="glass-card p-6 animate-in" style="animation-delay: 400ms">
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-lg font-semibold flex items-center gap-2 dark:text-white text-gray-900">
@@ -172,6 +266,7 @@ const dateRange = ref([])
 const activeShortcut = ref('')
 const currentProject = ref('')
 const trendUnit = ref('day')
+const expandedNodes = ref(new Set())
 
 const userProjects = computed(() => userStore.userProjects)
 
@@ -189,6 +284,7 @@ const trendUnits = [
 ]
 
 const recentVideos = ref([])
+const deliveryData = ref([])
 const cachedPlatformData = ref({})
 const cachedRegionData = ref({})
 const trendData = ref([])
@@ -248,6 +344,16 @@ function switchProject(p) {
   fetchTrend()
 }
 
+function toggleExpand(nodeId) {
+  const s = new Set(expandedNodes.value)
+  if (s.has(nodeId)) {
+    s.delete(nodeId)
+  } else {
+    s.add(nodeId)
+  }
+  expandedNodes.value = s
+}
+
 function applyDateShortcut(shortcut) {
   activeShortcut.value = shortcut.label
   dateRange.value = shortcut.getValue()
@@ -283,8 +389,27 @@ async function fetchStats() {
     cachedRegionData.value = response.videos_by_region
 
     updatePlatformChart()
+
+    // 获取用户交付数据
+    fetchDeliveryData()
   } catch (error) {
     console.error('Fetch stats error:', error)
+  }
+}
+
+async function fetchDeliveryData() {
+  try {
+    const params = {}
+    if (dateRange.value && dateRange.value.length === 2) {
+      params.start_date = dateRange.value[0]
+      params.end_date = dateRange.value[1]
+    }
+    if (currentProject.value) {
+      params.project = currentProject.value
+    }
+    deliveryData.value = await api.get('/videos/dashboard/user-delivery', { params })
+  } catch (error) {
+    console.error('Fetch delivery data error:', error)
   }
 }
 

@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, asc
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 import csv
 import io
@@ -43,6 +43,9 @@ def create_video(
     new_video = Video(**video.dict(), creator_id=current_user.id)
     if not new_video.video_code:
         new_video.video_code = generate_video_code(db, video.region, video.content_direction, video.publish_date)
+    # 如果创建时没有指定 stats_updated_at，则使用当前时间（表示播放数据最后更新时间）
+    if not new_video.stats_updated_at:
+        new_video.stats_updated_at = datetime.utcnow()
     db.add(new_video)
     db.commit()
     db.refresh(new_video)
@@ -462,3 +465,142 @@ def get_dashboard_stats(
         videos_by_region=region_stats,
         recent_videos=[VideoResponse.from_orm(v) for v in recent_videos]
     )
+
+
+@router.get("/dashboard/user-delivery")
+def get_user_delivery(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    project: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """获取用户交付数据，按树形结构展示（组长包含组员汇总）"""
+    user_projects = []
+    if current_user.projects:
+        user_projects = [p.strip() for p in current_user.projects.split(',') if p.strip()]
+    if not user_projects:
+        user_projects = ['Gamoji', 'Poseme', '内容孵化']
+
+    # 确定可见用户列表
+    if current_user.role == UserRole.ADMIN:
+        users = db.query(User).filter(User.is_active == True).all()
+    elif current_user.role == UserRole.LEADER:
+        # 组长看到自己和直属下属
+        subordinate_ids = _get_subordinate_ids_local(current_user, db)
+        users = db.query(User).filter(User.id.in_(subordinate_ids), User.is_active == True).all()
+    else:
+        users = [current_user]
+
+    # 构建用户ID到用户对象的映射
+    user_map = {u.id: u for u in users}
+
+    # 构建父子关系
+    children_map = {}  # parent_id -> [child_ids]
+    for u in users:
+        if u.parent_id and u.parent_id in user_map:
+            children_map.setdefault(u.parent_id, []).append(u.id)
+
+    # 查询每个用户的视频统计数据
+    video_query = db.query(
+        Video.creator_id,
+        func.count(Video.id).label('video_count'),
+        func.coalesce(func.sum(Video.price_usd), 0).label('total_amount'),
+        func.coalesce(func.sum(Video.play_count), 0).label('total_plays'),
+        func.coalesce(func.sum(Video.like_count), 0).label('total_likes'),
+        func.coalesce(func.sum(Video.comment_count), 0).label('total_comments'),
+        func.coalesce(func.sum(Video.share_count), 0).label('total_shares'),
+    )
+
+    video_query = video_query.filter(Video.creator_id.in_(user_map.keys()))
+    video_query = video_query.filter(Video.project.in_(user_projects))
+
+    if start_date:
+        video_query = video_query.filter(Video.publish_date >= start_date)
+    if end_date:
+        video_query = video_query.filter(Video.publish_date <= end_date)
+    if project and project in user_projects:
+        video_query = video_query.filter(Video.project == project)
+
+    stats_by_user = {}
+    for row in video_query.group_by(Video.creator_id).all():
+        plays = row.total_plays or 0
+        amount = row.total_amount or 0
+        count = row.video_count or 0
+        stats_by_user[row.creator_id] = {
+            'video_count': count,
+            'total_amount': round(amount, 2),
+            'total_plays': plays,
+            'total_likes': row.total_likes or 0,
+            'total_comments': row.total_comments or 0,
+            'total_shares': row.total_shares or 0,
+            'cpm': round((amount / plays * 1000), 2) if plays > 0 else 0,
+            'avg_price': round(amount / count, 2) if count > 0 else 0,
+        }
+
+    # 递归构建树形数据（组长汇总包含组员数据）
+    def build_tree(user_id):
+        u = user_map[user_id]
+        own_stats = stats_by_user.get(user_id, {
+            'video_count': 0, 'total_amount': 0, 'total_plays': 0,
+            'total_likes': 0, 'total_comments': 0, 'total_shares': 0,
+            'cpm': 0, 'avg_price': 0
+        })
+
+        node = {
+            'id': u.id,
+            'name': u.full_name or u.username,
+            'role': u.role.value if u.role else 'user',
+            'is_leader': u.role in (UserRole.ADMIN, UserRole.LEADER),
+            **own_stats,
+            'children': []
+        }
+
+        # 如果是组长/管理员，汇总下属数据
+        child_ids = children_map.get(user_id, [])
+        if child_ids:
+            total = {
+                'video_count': own_stats['video_count'],
+                'total_amount': own_stats['total_amount'],
+                'total_plays': own_stats['total_plays'],
+                'total_likes': own_stats['total_likes'],
+                'total_comments': own_stats['total_comments'],
+                'total_shares': own_stats['total_shares'],
+            }
+            for cid in child_ids:
+                child_node = build_tree(cid)
+                node['children'].append(child_node)
+                total['video_count'] += child_node.get('_sum_video_count', child_node['video_count'])
+                total['total_amount'] += child_node.get('_sum_total_amount', child_node['total_amount'])
+                total['total_plays'] += child_node.get('_sum_total_plays', child_node['total_plays'])
+                total['total_likes'] += child_node.get('_sum_total_likes', child_node['total_likes'])
+                total['total_comments'] += child_node.get('_sum_total_comments', child_node['total_comments'])
+                total['total_shares'] += child_node.get('_sum_total_shares', child_node['total_shares'])
+
+            node['_sum_video_count'] = total['video_count']
+            node['_sum_total_amount'] = round(total['total_amount'], 2)
+            node['_sum_total_plays'] = total['total_plays']
+            node['_sum_total_likes'] = total['total_likes']
+            node['_sum_total_comments'] = total['total_comments']
+            node['_sum_total_shares'] = total['total_shares']
+            node['_sum_cpm'] = round(total['total_amount'] / total['total_plays'] * 1000, 2) if total['total_plays'] > 0 else 0
+            node['_sum_avg_price'] = round(total['total_amount'] / total['video_count'], 2) if total['video_count'] > 0 else 0
+
+        return node
+
+    # 找到根节点（没有上级在可见用户列表中的用户）
+    root_nodes = []
+    for u in users:
+        if not u.parent_id or u.parent_id not in user_map:
+            root_nodes.append(build_tree(u.id))
+
+    return root_nodes
+
+
+def _get_subordinate_ids_local(user: User, db: Session) -> list:
+    """递归获取用户所有下属ID（包含自身）"""
+    ids = [user.id]
+    children = db.query(User).filter(User.parent_id == user.id).all()
+    for child in children:
+        ids.extend(_get_subordinate_ids_local(child, db))
+    return ids
