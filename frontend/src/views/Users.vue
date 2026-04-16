@@ -226,7 +226,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import api from '@/utils/api'
+import api, { getErrorMsg } from '@/utils/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import UserFormDialog from '@/components/UserFormDialog.vue'
@@ -305,7 +305,7 @@ async function toggleUserStatus(user) {
     ElMessage.success(user.is_active ? '已禁用' : '已启用')
     fetchUsers()
   } catch (error) {
-    ElMessage.error(error.response?.data?.detail || '操作失败')
+    ElMessage.error(getErrorMsg(error))
   }
 }
 
@@ -320,7 +320,7 @@ function deleteUser(user) {
       ElMessage.success('删除成功')
       fetchUsers()
     } catch (error) {
-      ElMessage.error(error.response?.data?.detail || '删除失败')
+      ElMessage.error(getErrorMsg(error))
     }
   }).catch(() => {})
 }

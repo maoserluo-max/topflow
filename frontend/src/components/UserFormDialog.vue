@@ -156,7 +156,7 @@
 
 <script setup>
 import { ref, reactive, watch, computed } from 'vue'
-import api from '@/utils/api'
+import api, { getErrorMsg } from '@/utils/api'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 
@@ -301,7 +301,7 @@ async function handleSubmit() {
     emit('submitted')
     emit('close')
   } catch (error) {
-    ElMessage.error(error.response?.data?.detail || '操作失败')
+    ElMessage.error(getErrorMsg(error))
   } finally {
     submitting.value = false
   }

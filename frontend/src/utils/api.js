@@ -37,4 +37,24 @@ api.interceptors.response.use(
   }
 )
 
+/**
+ * 从 axios 错误响应中提取可读的错误信息
+ */
+export function getErrorMsg(error) {
+  const resp = error.response?.data
+  if (resp?.detail) {
+    if (Array.isArray(resp.detail)) {
+      // Pydantic 验证错误
+      return resp.detail.map(e => {
+        const field = e.loc?.slice(1).join('.') || ''
+        return field ? `${field}: ${e.msg}` : e.msg
+      }).join('; ')
+    }
+    if (typeof resp.detail === 'string') {
+      return resp.detail
+    }
+  }
+  return error.message || '操作失败'
+}
+
 export default api

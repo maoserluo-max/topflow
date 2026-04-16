@@ -129,7 +129,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import api from '@/utils/api'
+import api, { getErrorMsg } from '@/utils/api'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
@@ -230,7 +230,7 @@ async function generateCodes() {
     }
     await loadInviteCodes()
   } catch (error) {
-    ElMessage.error(error.response?.data?.detail || '生成失败')
+    ElMessage.error(getErrorMsg(error))
   } finally {
     generating.value = false
   }

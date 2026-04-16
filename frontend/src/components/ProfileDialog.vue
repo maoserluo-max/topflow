@@ -81,7 +81,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import api from '@/utils/api'
+import api, { getErrorMsg } from '@/utils/api'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 
@@ -145,7 +145,7 @@ async function handleSave() {
     ElMessage.success('账户信息更新成功')
     visible.value = false
   } catch (error) {
-    ElMessage.error(error.response?.data?.detail || '更新失败')
+    ElMessage.error(getErrorMsg(error))
   } finally {
     saving.value = false
   }

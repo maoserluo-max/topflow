@@ -19,8 +19,8 @@ class UserBase(BaseModel):
     @field_validator('username')
     @classmethod
     def validate_username(cls, v):
-        if len(v) < 3:
-            raise ValueError('用户名至少3个字符')
+        if len(v) < 2:
+            raise ValueError('用户名至少2个字符')
         if len(v) > 50:
             raise ValueError('用户名不能超过50个字符')
         if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fff]+$', v):
