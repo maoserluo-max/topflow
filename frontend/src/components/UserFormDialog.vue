@@ -73,7 +73,7 @@
                   v-model="form.parent_id"
                   class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
                 >
-                  <option :value="null" class="dark:bg-gray-900 bg-white">无</option>
+                  <option :value="0" class="dark:bg-gray-900 bg-white">无</option>
                   <option v-for="p in parentCandidates" :key="p.id" :value="p.id" class="dark:bg-gray-900 bg-white">
                     {{ p.full_name || p.username }}（{{ getRoleName(p.role) }}）
                   </option>
@@ -240,7 +240,7 @@ const defaultForm = {
   email: '',
   full_name: '',
   role: 'user',
-  parent_id: null,
+  parent_id: 0,
   password: '',
   selectedProjects: [...userStore.userProjects]
 }
@@ -255,14 +255,14 @@ watch(() => props.visible, (val) => {
         email: props.editData.email || '',
         full_name: props.editData.full_name || '',
         role: props.editData.role,
-        parent_id: props.editData.parent_id || null,
+        parent_id: props.editData.parent_id || 0,
         password: '',
         selectedProjects: props.editData.projects ? props.editData.projects.split(',').map(p => p.trim()).filter(p => p) : ['Gamoji', 'Poseme', '内容孵化']
       })
     } else {
       Object.assign(form, { ...defaultForm })
       // 新建时，默认上级为当前用户
-      form.parent_id = userStore.user?.id || null
+      form.parent_id = userStore.user?.id || 0
     }
   }
 })
@@ -280,8 +280,13 @@ async function handleSubmit() {
     const data = { ...form }
     data.projects = data.selectedProjects.join(',')
     delete data.selectedProjects
-    if (data.parent_id === null || data.parent_id === '') {
+    // 处理 parent_id：0或空值时不传（让后端自动设为当前用户）
+    if (!data.parent_id || data.parent_id === 0) {
       delete data.parent_id
+    }
+    // 处理 full_name：空字符串不传
+    if (!data.full_name) {
+      delete data.full_name
     }
     if (props.isEdit) {
       if (!data.email) delete data.email
