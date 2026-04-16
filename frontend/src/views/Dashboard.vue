@@ -206,7 +206,7 @@ const dateShortcuts = [
   { label: '本年', getValue: () => { const now = new Date(); const first = new Date(now.getFullYear(), 0, 1); return [fmt(first), fmt(now)]; } }
 ]
 
-function fmt(d) { return d.toISOString().split('T')[0] }
+function fmt(d) { const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}` }
 
 onMounted(() => {
   if (userProjects.value.length > 0) {
