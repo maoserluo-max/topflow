@@ -124,7 +124,7 @@
                   Cookies管理
                 </button>
                 <button
-                  v-if="userStore.isAdmin"
+                  v-if="userStore.isLeaderOrAbove"
                   @click="showInviteCodesDialog"
                   class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm dark:text-gray-300 dark:hover:text-white dark:hover:bg-white/5 text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 >
@@ -197,7 +197,7 @@ const menuItems = computed(() => {
     { path: '/videos', label: '视频管理', icon: VideoIcon },
   ]
 
-  if (userStore.isAdmin) {
+  if (userStore.isLeaderOrAbove) {
     baseItems.push(
       { path: '/users', label: '用户管理', icon: UserIcon }
     )

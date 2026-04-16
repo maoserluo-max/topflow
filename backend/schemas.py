@@ -82,7 +82,7 @@ class InviteCodeCreate(BaseModel):
     @classmethod
     def validate_register_role(cls, v):
         if v is not None:
-            valid_roles = ['leader', 'user']
+            valid_roles = ['admin', 'leader', 'user']
             if v not in valid_roles:
                 raise ValueError(f'邀请码注册角色只能为: {", ".join(valid_roles)}')
         return v

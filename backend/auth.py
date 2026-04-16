@@ -75,3 +75,10 @@ async def get_current_leader_or_above(current_user: User = Depends(get_current_u
     if ROLE_HIERARCHY.get(current_user.role, 0) < ROLE_HIERARCHY.get(UserRole.LEADER, 0):
         raise HTTPException(status_code=403, detail="权限不足")
     return current_user
+
+
+async def get_current_admin_or_leader(current_user: User = Depends(get_current_user)) -> User:
+    """管理员或组长权限（用于用户管理和邀请码管理）"""
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.LEADER]:
+        raise HTTPException(status_code=403, detail="权限不足，需要管理员或组长权限")
+    return current_user

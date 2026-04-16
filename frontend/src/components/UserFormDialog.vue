@@ -56,7 +56,7 @@
                 />
               </div>
 
-              <div class="space-y-1.5">
+              <div v-if="canChangeRole" class="space-y-1.5">
                 <label class="text-xs dark:text-gray-500 text-gray-600 font-medium uppercase tracking-wide">角色 *</label>
                 <select
                   v-model="form.role"
@@ -81,11 +81,11 @@
                 <p class="text-xs dark:text-gray-600 text-gray-400 mt-1">上级角色必须高于当前用户角色</p>
               </div>
 
-              <div class="space-y-1.5">
+              <div v-if="canChangeProjects" class="space-y-1.5">
                 <label class="text-xs dark:text-gray-500 text-gray-600 font-medium uppercase tracking-wide">项目权限</label>
                 <div class="flex flex-wrap gap-2">
                   <label
-                    v-for="p in allProjects"
+                    v-for="p in availableProjects"
                     :key="p"
                     class="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-all dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 dark:hover:bg-white/10 hover:bg-gray-50"
                     :class="{ 'dark:!bg-primary-500/20 !bg-primary-50 dark:!border-primary-500/40 !border-primary-300 dark:!text-primary-300 !text-primary-700': form.selectedProjects.includes(p), 'opacity-50 cursor-not-allowed': isAdminRole }"
@@ -161,8 +161,6 @@ const emit = defineEmits(['close', 'submitted'])
 const userStore = useUserStore()
 const submitting = ref(false)
 
-const allProjects = ['Gamoji', 'Poseme', '内容孵化']
-
 const ROLE_HIERARCHY = { super_admin: 4, admin: 3, leader: 2, user: 1 }
 
 const allRoles = [
@@ -172,11 +170,33 @@ const allRoles = [
   { value: 'user', label: '普通用户' }
 ]
 
+// 当前用户可以创建的角色：只能创建低于自身级别的角色
 const availableRoles = computed(() => {
   const currentRole = userStore.user?.role || 'user'
   const currentLevel = ROLE_HIERARCHY[currentRole] || 1
-  // 只能创建低于自身级别的角色
   return allRoles.filter(r => ROLE_HIERARCHY[r.value] < currentLevel)
+})
+
+// 当前用户可以选择的项目
+const availableProjects = computed(() => {
+  const currentRole = userStore.user?.role || 'user'
+  if (['super_admin', 'admin'].includes(currentRole)) {
+    return ['Gamoji', 'Poseme', '内容孵化']
+  }
+  // 组长只能选择自己拥有的项目
+  return userStore.userProjects.length > 0 ? userStore.userProjects : ['Gamoji', 'Poseme', '内容孵化']
+})
+
+// 是否可以修改角色（组长不能修改角色）
+const canChangeRole = computed(() => {
+  const currentRole = userStore.user?.role || 'user'
+  return ['super_admin', 'admin'].includes(currentRole)
+})
+
+// 是否可以修改项目权限（组长不能修改项目权限）
+const canChangeProjects = computed(() => {
+  const currentRole = userStore.user?.role || 'user'
+  return ['super_admin', 'admin'].includes(currentRole)
 })
 
 const isAdminRole = computed(() => ['super_admin', 'admin'].includes(form.role))
@@ -191,7 +211,7 @@ const parentCandidates = computed(() => {
 })
 
 function getRoleName(role) {
-  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '用户' }
+  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '普通用户' }
   return names[role] || role
 }
 
@@ -221,6 +241,13 @@ watch(() => props.visible, (val) => {
       })
     } else {
       Object.assign(form, { ...defaultForm })
+      // 新建时，默认上级为当前用户
+      form.parent_id = userStore.user?.id || null
+      // 组长新建用户时，项目默认为自己的项目
+      const currentRole = userStore.user?.role || 'user'
+      if (currentRole === 'leader') {
+        form.selectedProjects = [...userStore.userProjects]
+      }
     }
   }
 })
@@ -228,7 +255,7 @@ watch(() => props.visible, (val) => {
 // 当角色为管理员及以上时，自动选中所有项目
 watch(() => form.role, (val) => {
   if (['super_admin', 'admin'].includes(val)) {
-    form.selectedProjects = [...allProjects]
+    form.selectedProjects = ['Gamoji', 'Poseme', '内容孵化']
   }
 })
 
@@ -253,7 +280,7 @@ async function handleSubmit() {
     emit('submitted')
     emit('close')
   } catch (error) {
-    console.error('Submit error:', error)
+    ElMessage.error(error.response?.data?.detail || '操作失败')
   } finally {
     submitting.value = false
   }

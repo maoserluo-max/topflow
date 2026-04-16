@@ -13,17 +13,17 @@
         <div class="space-y-1.5">
           <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">注册角色</label>
           <select v-model="newCode.register_role" class="w-full px-3 py-2 rounded-lg text-sm dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-primary-500/50 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all">
-            <option value="user" class="dark:bg-gray-900">普通用户</option>
-            <option value="leader" class="dark:bg-gray-900">组长</option>
+            <option v-for="r in allowedRegisterRoles" :key="r.value" :value="r.value" class="dark:bg-gray-900">{{ r.label }}</option>
           </select>
         </div>
         <div class="space-y-1.5">
           <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">项目权限</label>
           <div class="flex flex-wrap gap-2 mt-1">
-            <label v-for="p in allProjects" :key="p" class="inline-flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" :value="p" v-model="selectedProjects" class="rounded dark:bg-white/5 dark:border-white/20 border-gray-300 text-primary-600 focus:ring-primary-500" />
+            <label v-for="p in availableProjects" :key="p" class="inline-flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" :value="p" v-model="selectedProjects" :disabled="isAdminRole" class="rounded dark:bg-white/5 dark:border-white/20 border-gray-300 text-primary-600 focus:ring-primary-500" />
               <span class="text-sm dark:text-gray-300 text-gray-700">{{ p }}</span>
             </label>
+            <p v-if="isAdminRole" class="text-xs dark:text-gray-600 text-gray-400 w-full mt-1">管理员及以上默认拥有所有项目</p>
           </div>
         </div>
         <div class="space-y-1.5">
@@ -127,10 +127,12 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/utils/api'
+import { useUserStore } from '@/stores/user'
 
+const userStore = useUserStore()
 const visible = ref(false)
 const loadingCodes = ref(false)
 const generating = ref(false)
@@ -140,7 +142,43 @@ const currentPage = ref(1)
 const pageSize = 20
 const filterUsed = ref(null)
 
-const allProjects = ['Gamoji', 'Poseme', '内容孵化']
+const ROLE_HIERARCHY = { super_admin: 4, admin: 3, leader: 2, user: 1 }
+
+// 根据当前用户角色确定可选的注册角色
+const allowedRegisterRoles = computed(() => {
+  const role = userStore.user?.role || 'user'
+  if (role === 'super_admin') {
+    return [
+      { value: 'admin', label: '管理员' },
+      { value: 'leader', label: '组长' },
+      { value: 'user', label: '普通用户' }
+    ]
+  } else if (role === 'admin') {
+    return [
+      { value: 'leader', label: '组长' },
+      { value: 'user', label: '普通用户' }
+    ]
+  } else {
+    // 组长只能邀请普通用户
+    return [
+      { value: 'user', label: '普通用户' }
+    ]
+  }
+})
+
+// 当前用户可选择的项目
+const availableProjects = computed(() => {
+  const role = userStore.user?.role || 'user'
+  if (['super_admin', 'admin'].includes(role)) {
+    return ['Gamoji', 'Poseme', '内容孵化']
+  }
+  // 组长只能选择自己拥有的项目
+  const userProjects = userStore.userProjects
+  return userProjects.length > 0 ? userProjects : ['Gamoji', 'Poseme', '内容孵化']
+})
+
+const isAdminRole = computed(() => ['super_admin', 'admin'].includes(newCode.register_role))
+
 const selectedProjects = ref(['Gamoji', 'Poseme', '内容孵化'])
 
 const newCode = reactive({
@@ -148,7 +186,22 @@ const newCode = reactive({
   count: 1,
 })
 
+// 管理员及以上角色自动选中所有项目
+watch(() => newCode.register_role, (val) => {
+  if (['super_admin', 'admin'].includes(val)) {
+    selectedProjects.value = ['Gamoji', 'Poseme', '内容孵化']
+  }
+})
+
 function open() {
+  // 初始化：组长的默认项目为自己的项目
+  const role = userStore.user?.role || 'user'
+  if (role === 'leader') {
+    selectedProjects.value = [...userStore.userProjects]
+  } else {
+    selectedProjects.value = ['Gamoji', 'Poseme', '内容孵化']
+  }
+  newCode.register_role = 'user'
   visible.value = true
 }
 
@@ -218,7 +271,7 @@ function copyCode(code) {
 }
 
 function getRoleName(role) {
-  const names = { leader: '组长', user: '普通用户' }
+  const names = { admin: '管理员', leader: '组长', user: '普通用户' }
   return names[role] || role || '普通用户'
 }
 
