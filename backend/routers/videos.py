@@ -475,27 +475,35 @@ def get_user_delivery(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """获取用户交付数据，按树形结构展示（组长包含组员汇总）"""
+    """获取用户交付数据，按树形结构展示（admin不参与，组长行展示下属合计）"""
     user_projects = []
     if current_user.projects:
         user_projects = [p.strip() for p in current_user.projects.split(',') if p.strip()]
     if not user_projects:
         user_projects = ['Gamoji', 'Poseme', '内容孵化']
 
-    # 确定可见用户列表
+    # 确定可见用户列表（admin角色不参与展示）
     if current_user.role == UserRole.ADMIN:
-        users = db.query(User).filter(User.is_active == True).all()
+        # 管理员看到所有非admin的活跃用户
+        users = db.query(User).filter(User.is_active == True, User.role != UserRole.ADMIN).all()
     elif current_user.role == UserRole.LEADER:
-        # 组长看到自己和直属下属
+        # 组长看到自己和直属下属（不含admin）
         subordinate_ids = _get_subordinate_ids_local(current_user, db)
-        users = db.query(User).filter(User.id.in_(subordinate_ids), User.is_active == True).all()
+        users = db.query(User).filter(
+            User.id.in_(subordinate_ids),
+            User.is_active == True,
+            User.role != UserRole.ADMIN
+        ).all()
     else:
-        users = [current_user]
+        users = [current_user] if current_user.role != UserRole.ADMIN else []
+
+    if not users:
+        return []
 
     # 构建用户ID到用户对象的映射
     user_map = {u.id: u for u in users}
 
-    # 构建父子关系
+    # 构建父子关系（如果parent是admin，则视为根节点）
     children_map = {}  # parent_id -> [child_ids]
     for u in users:
         if u.parent_id and u.parent_id in user_map:
@@ -538,7 +546,7 @@ def get_user_delivery(
             'avg_price': round(amount / count, 2) if count > 0 else 0,
         }
 
-    # 递归构建树形数据（组长汇总包含组员数据）
+    # 递归构建树形数据（组长行直接展示自身+下属合计）
     def build_tree(user_id):
         u = user_map[user_id]
         own_stats = stats_by_user.get(user_id, {
@@ -547,18 +555,20 @@ def get_user_delivery(
             'cpm': 0, 'avg_price': 0
         })
 
+        is_leader = u.role == UserRole.LEADER
+
         node = {
             'id': u.id,
             'name': u.full_name or u.username,
             'role': u.role.value if u.role else 'user',
-            'is_leader': u.role in (UserRole.ADMIN, UserRole.LEADER),
-            **own_stats,
+            'is_leader': is_leader,
             'children': []
         }
 
-        # 如果是组长/管理员，汇总下属数据
+        # 收集子节点
         child_ids = children_map.get(user_id, [])
         if child_ids:
+            # 组长：行显示自身+所有下属合计
             total = {
                 'video_count': own_stats['video_count'],
                 'total_amount': own_stats['total_amount'],
@@ -570,6 +580,7 @@ def get_user_delivery(
             for cid in child_ids:
                 child_node = build_tree(cid)
                 node['children'].append(child_node)
+                # 递归汇总：用child的合计（如果有_sum字段则用_sum，否则用自身）
                 total['video_count'] += child_node.get('_sum_video_count', child_node['video_count'])
                 total['total_amount'] += child_node.get('_sum_total_amount', child_node['total_amount'])
                 total['total_plays'] += child_node.get('_sum_total_plays', child_node['total_plays'])
@@ -577,18 +588,36 @@ def get_user_delivery(
                 total['total_comments'] += child_node.get('_sum_total_comments', child_node['total_comments'])
                 total['total_shares'] += child_node.get('_sum_total_shares', child_node['total_shares'])
 
+            # 组长行展示合计数据
+            node['video_count'] = total['video_count']
+            node['total_amount'] = round(total['total_amount'], 2)
+            node['total_plays'] = total['total_plays']
+            node['total_likes'] = total['total_likes']
+            node['total_comments'] = total['total_comments']
+            node['total_shares'] = total['total_shares']
+            node['cpm'] = round(total['total_amount'] / total['total_plays'] * 1000, 2) if total['total_plays'] > 0 else 0
+            node['avg_price'] = round(total['total_amount'] / total['video_count'], 2) if total['video_count'] > 0 else 0
+
+            # 保留汇总字段供上级递归使用
             node['_sum_video_count'] = total['video_count']
             node['_sum_total_amount'] = round(total['total_amount'], 2)
             node['_sum_total_plays'] = total['total_plays']
             node['_sum_total_likes'] = total['total_likes']
             node['_sum_total_comments'] = total['total_comments']
             node['_sum_total_shares'] = total['total_shares']
-            node['_sum_cpm'] = round(total['total_amount'] / total['total_plays'] * 1000, 2) if total['total_plays'] > 0 else 0
-            node['_sum_avg_price'] = round(total['total_amount'] / total['video_count'], 2) if total['video_count'] > 0 else 0
+        else:
+            # 普通用户（叶子节点）：展示自身数据
+            node.update(own_stats)
+            node['_sum_video_count'] = own_stats['video_count']
+            node['_sum_total_amount'] = own_stats['total_amount']
+            node['_sum_total_plays'] = own_stats['total_plays']
+            node['_sum_total_likes'] = own_stats['total_likes']
+            node['_sum_total_comments'] = own_stats['total_comments']
+            node['_sum_total_shares'] = own_stats['total_shares']
 
         return node
 
-    # 找到根节点（没有上级在可见用户列表中的用户）
+    # 找到根节点（没有上级在可见用户列表中的用户，或上级是admin）
     root_nodes = []
     for u in users:
         if not u.parent_id or u.parent_id not in user_map:

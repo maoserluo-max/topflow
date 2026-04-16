@@ -124,7 +124,7 @@
           </thead>
           <tbody>
             <template v-for="node in deliveryData" :key="node.id">
-              <!-- 自身行 -->
+              <!-- 组长/用户行 -->
               <tr class="group dark:hover:bg-white/5 hover:bg-gray-50 transition-colors">
                 <td class="py-3 px-2 font-medium dark:text-white text-gray-900 whitespace-nowrap">
                   <div class="flex items-center gap-2">
@@ -150,21 +150,7 @@
                 <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(node.total_shares) }}</td>
                 <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">${{ node.avg_price?.toFixed(2) || '0.00' }}</td>
               </tr>
-              <!-- 汇总行（组长/管理员的含组员汇总） -->
-              <tr v-if="node.is_leader && node._sum_video_count !== undefined && expandedNodes.has(node.id)" class="dark:bg-amber-500/5 bg-amber-50/50">
-                <td class="py-2 px-2 text-xs dark:text-amber-400 text-amber-600 font-medium whitespace-nowrap">
-                  <span class="ml-6">↳ 组内合计</span>
-                </td>
-                <td class="text-right py-2 px-2 font-mono text-xs dark:text-amber-300 text-amber-600 font-medium">{{ node._sum_video_count }}</td>
-                <td class="text-right py-2 px-2 font-mono text-xs text-cyber-green font-medium">${{ node._sum_total_amount?.toFixed(2) || '0.00' }}</td>
-                <td class="text-right py-2 px-2 font-mono text-xs dark:text-pink-400 text-pink-600 font-medium">{{ node._sum_cpm?.toFixed(2) || '0.00' }}</td>
-                <td class="text-right py-2 px-2 font-mono text-xs dark:text-amber-300 text-amber-600 font-medium">{{ formatNumber(node._sum_total_plays) }}</td>
-                <td class="text-right py-2 px-2 font-mono text-xs dark:text-amber-300 text-amber-600 font-medium">{{ formatNumber(node._sum_total_likes) }}</td>
-                <td class="text-right py-2 px-2 font-mono text-xs dark:text-amber-300 text-amber-600 font-medium">{{ formatNumber(node._sum_total_comments) }}</td>
-                <td class="text-right py-2 px-2 font-mono text-xs dark:text-amber-300 text-amber-600 font-medium">{{ formatNumber(node._sum_total_shares) }}</td>
-                <td class="text-right py-2 px-2 font-mono text-xs dark:text-amber-300 text-amber-600 font-medium">${{ node._sum_avg_price?.toFixed(2) || '0.00' }}</td>
-              </tr>
-              <!-- 子节点 -->
+              <!-- 子节点（组员明细） -->
               <template v-if="node.children && node.children.length > 0 && expandedNodes.has(node.id)">
                 <template v-for="child in node.children" :key="child.id">
                   <tr class="group dark:hover:bg-white/5 hover:bg-gray-50 transition-colors">
