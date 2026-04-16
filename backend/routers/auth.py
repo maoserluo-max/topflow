@@ -77,8 +77,8 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     if db_email:
         raise HTTPException(status_code=400, detail="邮箱已被注册")
 
-    # 邀请码的注册角色
-    register_role = UserRole(invite.register_role) if invite.register_role else UserRole.USER
+    # 邀请码的注册角色 - 通过邀请码注册的用户统一为普通用户
+    register_role = UserRole.USER
 
     # 邀请码的项目权限：继承创建者的项目（如果有指定则使用指定的）
     invite_creator = db.query(User).filter(User.id == invite.created_by).first()
@@ -88,11 +88,6 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         new_projects = invite_creator.projects
     else:
         new_projects = "Gamoji,Poseme,内容孵化"
-
-    # 组长只能创建下属组长或普通用户邀请码，验证注册角色合法性
-    if invite_creator and invite_creator.role == UserRole.LEADER:
-        if register_role not in [UserRole.LEADER, UserRole.USER]:
-            raise HTTPException(status_code=400, detail="组长只能邀请组长或普通用户")
 
     new_user = User(
         username=user.username,
@@ -163,13 +158,13 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 @router.get("/users")
 def get_users(
-    current_user: User = Depends(get_current_admin_or_leader),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     if current_user.role == UserRole.SUPER_ADMIN:
         users = db.query(User).all()
     else:
-        # 管理员和组长只能看到自己下属（包含自身）
+        # 管理员只能看到自己下属（包含自身）
         subordinate_ids = _get_subordinate_ids(current_user, db)
         users = db.query(User).filter(User.id.in_(subordinate_ids)).all()
     return [_user_to_response(u, db) for u in users]
@@ -179,7 +174,7 @@ def get_users(
 def update_user(
     user_id: int,
     user_update: UserUpdate,
-    current_user: User = Depends(get_current_admin_or_leader),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     db_user = db.query(User).filter(User.id == user_id).first()
@@ -194,8 +189,8 @@ def update_user(
     if current_user.role != UserRole.SUPER_ADMIN and db_user.role == UserRole.SUPER_ADMIN:
         raise HTTPException(status_code=403, detail="权限不足")
 
-    # 组长只能修改自己的下属（组长或普通用户）
-    if current_user.role == UserRole.LEADER:
+    # 管理员只能修改自己的下属
+    if current_user.role == UserRole.ADMIN:
         subordinate_ids = _get_subordinate_ids(current_user, db)
         if db_user.id not in subordinate_ids:
             raise HTTPException(status_code=403, detail="只能修改自己的下属用户")
@@ -206,21 +201,7 @@ def update_user(
         # 不能将用户角色提升到等于或高于自身
         if ROLE_HIERARCHY.get(new_role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
             raise HTTPException(status_code=403, detail="不能将用户角色提升到等于或高于自身级别")
-        # 组长只能在 leader 和 user 之间切换下属角色
-        if current_user.role == UserRole.LEADER and new_role not in [UserRole.LEADER, UserRole.USER]:
-            raise HTTPException(status_code=403, detail="组长只能将下属设为组长或普通用户")
         update_data["role"] = new_role
-
-    # 组长修改项目权限时，不能超出自身拥有的项目
-    if current_user.role == UserRole.LEADER and "projects" in update_data:
-        leader_projects = set()
-        if current_user.projects:
-            leader_projects = {p.strip() for p in current_user.projects.split(',') if p.strip()}
-        if update_data["projects"]:
-            requested = {p.strip() for p in update_data["projects"].split(',') if p.strip()}
-            invalid = requested - leader_projects
-            if invalid:
-                raise HTTPException(status_code=403, detail=f"您无权分配以下项目: {', '.join(invalid)}")
 
     # 验证 parent_id 有效性
     if "parent_id" in update_data and update_data["parent_id"] is not None:
@@ -251,7 +232,7 @@ def update_user(
 @router.delete("/users/{user_id}")
 def delete_user(
     user_id: int,
-    current_user: User = Depends(get_current_admin_or_leader),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     db_user = db.query(User).filter(User.id == user_id).first()
@@ -265,8 +246,8 @@ def delete_user(
     if ROLE_HIERARCHY.get(db_user.role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
         raise HTTPException(status_code=403, detail="不能删除同级或更高级别的用户")
 
-    # 组长只能删除自己的下属（组长或普通用户）
-    if current_user.role == UserRole.LEADER:
+    # 管理员只能删除自己的下属
+    if current_user.role == UserRole.ADMIN:
         subordinate_ids = _get_subordinate_ids(current_user, db)
         if db_user.id not in subordinate_ids:
             raise HTTPException(status_code=403, detail="只能删除自己的下属用户")
@@ -295,7 +276,7 @@ def delete_user(
 @router.post("/users")
 def admin_create_user(
     user: AdminUserCreate,
-    current_user: User = Depends(get_current_admin_or_leader),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     db_user = db.query(User).filter(User.username == user.username).first()
@@ -311,10 +292,6 @@ def admin_create_user(
     if ROLE_HIERARCHY.get(new_role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
         raise HTTPException(status_code=403, detail="不能创建等于或高于自身级别的用户")
 
-    # 组长可创建下属组长或普通用户
-    if current_user.role == UserRole.LEADER and new_role not in [UserRole.LEADER, UserRole.USER]:
-        raise HTTPException(status_code=403, detail="组长只能创建下属组长或普通用户")
-
     # 验证 parent_id
     parent_id = user.parent_id
     if parent_id:
@@ -328,21 +305,8 @@ def admin_create_user(
         # 默认上级为当前用户
         parent_id = current_user.id
 
-    # 项目权限：组长创建的用户只能拥有组长拥有的项目子集
-    if current_user.role == UserRole.LEADER:
-        leader_projects = set()
-        if current_user.projects:
-            leader_projects = {p.strip() for p in current_user.projects.split(',') if p.strip()}
-        if user.projects:
-            requested = {p.strip() for p in user.projects.split(',') if p.strip()}
-            # 只允许组长拥有权限内的项目
-            allowed = requested & leader_projects
-            final_projects = ','.join(sorted(allowed)) if allowed else current_user.projects
-        else:
-            final_projects = current_user.projects
-        # 组长创建下属组长时，下属组长项目不能超过自身
-    else:
-        final_projects = user.projects
+    # 项目权限
+    final_projects = user.projects
 
     new_user = User(
         username=user.username,
@@ -369,7 +333,7 @@ def admin_create_user(
     return _user_to_response(new_user, db)
 
 
-# ==================== 邀请码管理（管理员和组长） ====================
+# ==================== 邀请码管理（仅系统管理员和管理员） ====================
 
 def _get_allowed_register_roles(current_user: User) -> list[str]:
     """获取当前用户允许生成的邀请码注册角色"""
@@ -377,15 +341,13 @@ def _get_allowed_register_roles(current_user: User) -> list[str]:
         return ['admin', 'leader', 'user']
     elif current_user.role == UserRole.ADMIN:
         return ['leader', 'user']
-    elif current_user.role == UserRole.LEADER:
-        return ['leader', 'user']
     return []
 
 
 @router.post("/invite-codes", response_model=InviteCodeResponse)
 def create_invite_code(
     code_data: InviteCodeCreate,
-    current_user: User = Depends(get_current_admin_or_leader),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     # 验证注册角色权限
@@ -393,23 +355,9 @@ def create_invite_code(
     if code_data.register_role and code_data.register_role not in allowed_roles:
         raise HTTPException(status_code=403, detail=f"您只能生成注册角色为: {', '.join(allowed_roles)} 的邀请码")
 
-    # 验证项目权限：组长生成的邀请码项目必须是自己拥有的
-    if current_user.role == UserRole.LEADER:
-        leader_projects = set()
-        if current_user.projects:
-            leader_projects = {p.strip() for p in current_user.projects.split(',') if p.strip()}
-        if code_data.projects:
-            requested = {p.strip() for p in code_data.projects.split(',') if p.strip()}
-            invalid = requested - leader_projects
-            if invalid:
-                raise HTTPException(status_code=403, detail=f"您无权分配以下项目: {', '.join(invalid)}")
-
     # 管理员及以上默认所有项目
     if not code_data.projects:
-        if current_user.role in [UserRole.SUPER_ADMIN, UserRole.ADMIN]:
-            code_data.projects = "Gamoji,Poseme,内容孵化"
-        else:
-            code_data.projects = current_user.projects
+        code_data.projects = "Gamoji,Poseme,内容孵化"
 
     code = secrets.token_urlsafe(8).upper()[:8]
     invite = InviteCode(
@@ -438,7 +386,7 @@ def create_invite_code(
 def batch_create_invite_codes(
     code_data: InviteCodeCreate,
     count: int = 5,
-    current_user: User = Depends(get_current_admin_or_leader),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     if count < 1 or count > 50:
@@ -449,22 +397,8 @@ def batch_create_invite_codes(
     if code_data.register_role and code_data.register_role not in allowed_roles:
         raise HTTPException(status_code=403, detail=f"您只能生成注册角色为: {', '.join(allowed_roles)} 的邀请码")
 
-    # 验证项目权限
-    if current_user.role == UserRole.LEADER:
-        leader_projects = set()
-        if current_user.projects:
-            leader_projects = {p.strip() for p in current_user.projects.split(',') if p.strip()}
-        if code_data.projects:
-            requested = {p.strip() for p in code_data.projects.split(',') if p.strip()}
-            invalid = requested - leader_projects
-            if invalid:
-                raise HTTPException(status_code=403, detail=f"您无权分配以下项目: {', '.join(invalid)}")
-
     if not code_data.projects:
-        if current_user.role in [UserRole.SUPER_ADMIN, UserRole.ADMIN]:
-            code_data.projects = "Gamoji,Poseme,内容孵化"
-        else:
-            code_data.projects = current_user.projects
+        code_data.projects = "Gamoji,Poseme,内容孵化"
 
     codes = []
     for _ in range(count):
@@ -499,7 +433,7 @@ def get_invite_codes(
     page: int = 1,
     page_size: int = 20,
     is_used: bool = None,
-    current_user: User = Depends(get_current_admin_or_leader),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     query = db.query(InviteCode).filter(InviteCode.created_by == current_user.id)
@@ -539,7 +473,7 @@ def get_invite_codes(
 @router.delete("/invite-codes/{code_id}")
 def delete_invite_code(
     code_id: int,
-    current_user: User = Depends(get_current_admin_or_leader),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     invite = db.query(InviteCode).filter(InviteCode.id == code_id).first()

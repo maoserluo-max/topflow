@@ -83,7 +83,7 @@
 
         <div class="text-center">
           <router-link to="/register" class="text-sm dark:text-gray-400 text-gray-500 hover:text-cyber-blue dark:hover:text-cyber-blue transition-colors">
-            没有账号？注册新账号
+            没有账号？使用邀请码注册
           </router-link>
         </div>
       </div>

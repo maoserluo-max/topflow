@@ -10,7 +10,7 @@
           <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
         </div>
         <h1 class="text-4xl font-bold gradient-text mb-2">TopFlow</h1>
-        <p class="dark:text-gray-400 text-gray-500 text-sm">注册新账号</p>
+        <p class="dark:text-gray-400 text-gray-500 text-sm">通过邀请码注册普通用户账号</p>
       </div>
 
       <div class="glass-card p-8 space-y-5">

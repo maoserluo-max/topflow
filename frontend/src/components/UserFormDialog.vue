@@ -177,26 +177,21 @@ const availableRoles = computed(() => {
   return allRoles.filter(r => ROLE_HIERARCHY[r.value] < currentLevel)
 })
 
-// 当前用户可以选择的项目
+// 当前用户可以选择的项目（仅管理员使用，默认所有项目）
 const availableProjects = computed(() => {
-  const currentRole = userStore.user?.role || 'user'
-  if (['super_admin', 'admin'].includes(currentRole)) {
-    return ['Gamoji', 'Poseme', '内容孵化']
-  }
-  // 组长只能选择自己拥有的项目
-  return userStore.userProjects.length > 0 ? userStore.userProjects : ['Gamoji', 'Poseme', '内容孵化']
+  return ['Gamoji', 'Poseme', '内容孵化']
 })
 
-// 是否可以修改角色（组长也可以修改下属角色）
+// 是否可以修改角色（仅管理员可修改）
 const canChangeRole = computed(() => {
   const currentRole = userStore.user?.role || 'user'
-  return ['super_admin', 'admin', 'leader'].includes(currentRole)
+  return ['super_admin', 'admin'].includes(currentRole)
 })
 
-// 是否可以修改项目权限（组长可修改下属项目权限，但限制在自身项目范围内）
+// 是否可以修改项目权限（仅管理员可修改）
 const canChangeProjects = computed(() => {
   const currentRole = userStore.user?.role || 'user'
-  return ['super_admin', 'admin', 'leader'].includes(currentRole)
+  return ['super_admin', 'admin'].includes(currentRole)
 })
 
 const isAdminRole = computed(() => ['super_admin', 'admin'].includes(form.role))
@@ -244,11 +239,6 @@ watch(() => props.visible, (val) => {
       Object.assign(form, { ...defaultForm })
       // 新建时，默认上级为当前用户
       form.parent_id = userStore.user?.id || null
-      // 组长新建用户时，项目默认为自己的项目
-      const currentRole = userStore.user?.role || 'user'
-      if (currentRole === 'leader') {
-        form.selectedProjects = [...userStore.userProjects]
-      }
     }
   }
 })

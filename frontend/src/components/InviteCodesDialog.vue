@@ -144,7 +144,7 @@ const filterUsed = ref(null)
 
 const ROLE_HIERARCHY = { super_admin: 4, admin: 3, leader: 2, user: 1 }
 
-// 根据当前用户角色确定可选的注册角色
+// 根据当前用户角色确定可选的注册角色（仅管理员可生成邀请码）
 const allowedRegisterRoles = computed(() => {
   const role = userStore.user?.role || 'user'
   if (role === 'super_admin') {
@@ -158,24 +158,13 @@ const allowedRegisterRoles = computed(() => {
       { value: 'leader', label: '组长' },
       { value: 'user', label: '普通用户' }
     ]
-  } else {
-    // 组长可邀请下属组长或普通用户
-    return [
-      { value: 'leader', label: '组长' },
-      { value: 'user', label: '普通用户' }
-    ]
   }
+  return []
 })
 
-// 当前用户可选择的项目
+// 当前用户可选择的项目（仅管理员可用，默认所有项目）
 const availableProjects = computed(() => {
-  const role = userStore.user?.role || 'user'
-  if (['super_admin', 'admin'].includes(role)) {
-    return ['Gamoji', 'Poseme', '内容孵化']
-  }
-  // 组长只能选择自己拥有的项目
-  const userProjects = userStore.userProjects
-  return userProjects.length > 0 ? userProjects : ['Gamoji', 'Poseme', '内容孵化']
+  return ['Gamoji', 'Poseme', '内容孵化']
 })
 
 const isAdminRole = computed(() => ['super_admin', 'admin'].includes(newCode.register_role))
@@ -195,14 +184,8 @@ watch(() => newCode.register_role, (val) => {
 })
 
 function open() {
-  // 初始化：组长的默认项目为自己的项目
-  const role = userStore.user?.role || 'user'
-  if (role === 'leader') {
-    selectedProjects.value = [...userStore.userProjects]
-  } else {
-    selectedProjects.value = ['Gamoji', 'Poseme', '内容孵化']
-  }
-  newCode.register_role = 'leader'
+  selectedProjects.value = ['Gamoji', 'Poseme', '内容孵化']
+  newCode.register_role = 'user'
   visible.value = true
 }
 
