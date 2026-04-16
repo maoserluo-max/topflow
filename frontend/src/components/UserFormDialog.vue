@@ -63,10 +63,22 @@
                   required
                   class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
                 >
-                  <option value="admin" class="dark:bg-gray-900 bg-white">管理员</option>
-                  <option value="manager" class="dark:bg-gray-900 bg-white">经理</option>
-                  <option value="user" class="dark:bg-gray-900 bg-white">普通用户</option>
+                  <option v-for="r in availableRoles" :key="r.value" :value="r.value" class="dark:bg-gray-900 bg-white">{{ r.label }}</option>
                 </select>
+              </div>
+
+              <div class="space-y-1.5">
+                <label class="text-xs dark:text-gray-500 text-gray-600 font-medium uppercase tracking-wide">上级</label>
+                <select
+                  v-model="form.parent_id"
+                  class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+                >
+                  <option :value="null" class="dark:bg-gray-900 bg-white">无</option>
+                  <option v-for="p in parentCandidates" :key="p.id" :value="p.id" class="dark:bg-gray-900 bg-white">
+                    {{ p.full_name || p.username }}（{{ getRoleName(p.role) }}）
+                  </option>
+                </select>
+                <p class="text-xs dark:text-gray-600 text-gray-400 mt-1">上级角色必须高于当前用户角色</p>
               </div>
 
               <div class="space-y-1.5">
@@ -76,17 +88,19 @@
                     v-for="p in allProjects"
                     :key="p"
                     class="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-all dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 dark:hover:bg-white/10 hover:bg-gray-50"
-                    :class="{ 'dark:!bg-primary-500/20 !bg-primary-50 dark:!border-primary-500/40 !border-primary-300 dark:!text-primary-300 !text-primary-700': form.selectedProjects.includes(p) }"
+                    :class="{ 'dark:!bg-primary-500/20 !bg-primary-50 dark:!border-primary-500/40 !border-primary-300 dark:!text-primary-300 !text-primary-700': form.selectedProjects.includes(p), 'opacity-50 cursor-not-allowed': isAdminRole }"
                   >
                     <input
                       type="checkbox"
                       :value="p"
                       v-model="form.selectedProjects"
+                      :disabled="isAdminRole"
                       class="w-4 h-4 rounded accent-primary-500"
                     />
                     <span class="text-sm font-medium">{{ p }}</span>
                   </label>
                 </div>
+                <p v-if="isAdminRole" class="text-xs dark:text-gray-600 text-gray-400 mt-1">管理员及以上默认拥有所有项目权限</p>
               </div>
 
               <div v-if="!isEdit" class="space-y-1.5">
@@ -130,27 +144,63 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, computed } from 'vue'
 import api from '@/utils/api'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
 const props = defineProps({
   visible: Boolean,
   isEdit: Boolean,
-  editData: { type: Object, default: null }
+  editData: { type: Object, default: null },
+  allUsers: { type: Array, default: () => [] }
 })
 
 const emit = defineEmits(['close', 'submitted'])
 
+const userStore = useUserStore()
 const submitting = ref(false)
 
 const allProjects = ['Gamoji', 'Poseme', '内容孵化']
+
+const ROLE_HIERARCHY = { super_admin: 4, admin: 3, leader: 2, user: 1 }
+
+const allRoles = [
+  { value: 'super_admin', label: '系统管理员' },
+  { value: 'admin', label: '管理员' },
+  { value: 'leader', label: '组长' },
+  { value: 'user', label: '普通用户' }
+]
+
+const availableRoles = computed(() => {
+  const currentRole = userStore.user?.role || 'user'
+  const currentLevel = ROLE_HIERARCHY[currentRole] || 1
+  // 只能创建低于自身级别的角色
+  return allRoles.filter(r => ROLE_HIERARCHY[r.value] < currentLevel)
+})
+
+const isAdminRole = computed(() => ['super_admin', 'admin'].includes(form.role))
+
+// 可选的上级候选人：角色级别高于当前选择的角色
+const parentCandidates = computed(() => {
+  const selectedLevel = ROLE_HIERARCHY[form.role] || 1
+  return props.allUsers.filter(u => {
+    const level = ROLE_HIERARCHY[u.role] || 1
+    return level > selectedLevel && u.id !== props.editData?.id
+  })
+})
+
+function getRoleName(role) {
+  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '用户' }
+  return names[role] || role
+}
 
 const defaultForm = {
   username: '',
   email: '',
   full_name: '',
   role: 'user',
+  parent_id: null,
   password: '',
   selectedProjects: ['Gamoji', 'Poseme', '内容孵化']
 }
@@ -165,6 +215,7 @@ watch(() => props.visible, (val) => {
         email: props.editData.email || '',
         full_name: props.editData.full_name || '',
         role: props.editData.role,
+        parent_id: props.editData.parent_id || null,
         password: '',
         selectedProjects: props.editData.projects ? props.editData.projects.split(',').map(p => p.trim()).filter(p => p) : ['Gamoji', 'Poseme', '内容孵化']
       })
@@ -174,12 +225,22 @@ watch(() => props.visible, (val) => {
   }
 })
 
+// 当角色为管理员及以上时，自动选中所有项目
+watch(() => form.role, (val) => {
+  if (['super_admin', 'admin'].includes(val)) {
+    form.selectedProjects = [...allProjects]
+  }
+})
+
 async function handleSubmit() {
   submitting.value = true
   try {
     const data = { ...form }
     data.projects = data.selectedProjects.join(',')
     delete data.selectedProjects
+    if (data.parent_id === null || data.parent_id === '') {
+      delete data.parent_id
+    }
     if (props.isEdit) {
       delete data.password
       if (!data.email) delete data.email

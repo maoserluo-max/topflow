@@ -11,8 +11,8 @@ import asyncio
 import csv
 import io
 
-from models import get_db, Video, User, OperationLog, UserRole, generate_video_code
-from auth import get_current_user, get_current_manager_or_admin, get_current_admin
+from models import get_db, Video, User, OperationLog, UserRole, generate_video_code, ROLE_HIERARCHY
+from auth import get_current_user, get_current_leader_or_above, get_current_admin
 from schemas import VideoCreate, VideoUpdate, VideoResponse, CrawlerRequest, DashboardStats
 
 router = APIRouter(prefix="/api/videos", tags=["视频管理"])
@@ -183,7 +183,7 @@ def export_videos(
     def generate():
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["项目", "视频编号", "平台", "地区", "达人名称", "标题", "内容方向", "价格(USD)", "发布日期", "播放量", "点赞数", "评论数", "分享数", "CPM", "状态", "负责人", "邮箱", "WhatsApp", "视频链接"])
+        writer.writerow(["项目", "视频编号", "视频类型", "内容方向", "平台", "地区", "达人名称", "标题", "价格(USD)", "发布日期", "播放量", "点赞数", "评论数", "分享数", "CPM", "状态", "负责人", "邮箱", "WhatsApp", "视频链接"])
         yield output.getvalue()
         output.seek(0)
         output.truncate(0)
@@ -196,11 +196,12 @@ def export_videos(
             writer.writerow([
                 v.project or "",
                 v.video_code or "",
+                v.video_types or "",
+                v.content_direction or "",
                 v.platform or "",
                 v.region or "",
                 v.influencer_name or "",
                 v.title or "",
-                v.content_direction or "",
                 v.price_usd or 0,
                 v.publish_date.strftime("%Y-%m-%d") if v.publish_date else "",
                 v.play_count or 0,
@@ -246,7 +247,7 @@ def get_video(
 def update_video(
     video_id: int,
     video_update: VideoUpdate,
-    current_user: User = Depends(get_current_manager_or_admin),
+    current_user: User = Depends(get_current_leader_or_above),
     db: Session = Depends(get_db)
 ):
     video = db.query(Video).filter(Video.id == video_id).first()
@@ -275,7 +276,7 @@ def update_video(
 @router.delete("/{video_id}")
 def delete_video(
     video_id: int,
-    current_user: User = Depends(get_current_manager_or_admin),
+    current_user: User = Depends(get_current_leader_or_above),
     db: Session = Depends(get_db)
 ):
     video = db.query(Video).filter(Video.id == video_id).first()
@@ -342,6 +343,56 @@ async def fetch_metadata(
         error_msg = str(e)
         print(f"❌ 抓取异常: {request.url} -> {error_msg[:300]}")
         raise HTTPException(status_code=500, detail=f"获取视频数据失败: {error_msg[:200]}")
+
+
+@router.get("/dashboard/trend")
+def get_dashboard_trend(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    project: Optional[str] = None,
+    platform: Optional[str] = None,
+    region: Optional[str] = None,
+    unit: Optional[str] = Query("day", description="统计单位: day/week/month"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Video)
+
+    user_projects = []
+    if current_user.projects:
+        user_projects = [p.strip() for p in current_user.projects.split(',') if p.strip()]
+    if not user_projects:
+        user_projects = ['Gamoji', 'Poseme', '内容孵化']
+    query = query.filter(Video.project.in_(user_projects))
+
+    if project and project in user_projects:
+        query = query.filter(Video.project == project)
+
+    if current_user.role == UserRole.USER:
+        query = query.filter(Video.creator_id == current_user.id)
+
+    if start_date:
+        query = query.filter(Video.publish_date >= start_date)
+    if end_date:
+        query = query.filter(Video.publish_date <= end_date)
+    if platform:
+        query = query.filter(Video.platform == platform)
+    if region:
+        query = query.filter(Video.region == region)
+
+    if unit == "month":
+        date_expr = func.strftime('%Y-%m', Video.publish_date)
+    elif unit == "week":
+        date_expr = func.strftime('%Y-W%W', Video.publish_date)
+    else:
+        date_expr = func.strftime('%Y-%m-%d', Video.publish_date)
+
+    trend_data = query.with_entities(
+        date_expr.label('period'),
+        func.count(Video.id).label('count')
+    ).filter(Video.publish_date.isnot(None)).group_by('period').order_by('period').all()
+
+    return [{"date": t.period, "count": t.count} for t in trend_data]
 
 
 @router.get("/dashboard/stats", response_model=DashboardStats)

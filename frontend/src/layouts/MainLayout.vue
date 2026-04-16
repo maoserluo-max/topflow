@@ -124,6 +124,16 @@
                   Cookies管理
                 </button>
                 <button
+                  v-if="userStore.isAdmin"
+                  @click="showInviteCodesDialog"
+                  class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm dark:text-gray-300 dark:hover:text-white dark:hover:bg-white/5 text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                  邀请码管理
+                </button>
+                <button
                   @click="handleLogout"
                   class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors"
                 >
@@ -144,6 +154,7 @@
     </div>
 
     <CookiesDialog ref="cookiesDialogRef" />
+    <InviteCodesDialog ref="inviteCodesDialogRef" />
   </div>
 </template>
 
@@ -153,12 +164,14 @@ import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 import CookiesDialog from '@/components/CookiesDialog.vue'
+import InviteCodesDialog from '@/components/InviteCodesDialog.vue'
 
 const route = useRoute()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
 const sidebarCollapsed = ref(false)
 const cookiesDialogRef = ref(null)
+const inviteCodesDialogRef = ref(null)
 
 const currentTitle = computed(() => route.meta.title || '仪表盘')
 
@@ -186,7 +199,12 @@ const menuItems = computed(() => {
 
   if (userStore.isAdmin) {
     baseItems.push(
-      { path: '/users', label: '用户管理', icon: UserIcon },
+      { path: '/users', label: '用户管理', icon: UserIcon }
+    )
+  }
+
+  if (userStore.isSuperAdmin) {
+    baseItems.push(
       { path: '/logs', label: '操作日志', icon: LogsIcon }
     )
   }
@@ -195,14 +213,15 @@ const menuItems = computed(() => {
 })
 
 function getRoleName(role) {
-  const names = { admin: '管理员', manager: '经理', user: '用户' }
+  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '用户' }
   return names[role] || role
 }
 
 function getRoleClass(role) {
   const classes = {
+    super_admin: 'bg-purple-500/10 text-purple-400',
     admin: 'bg-red-500/10 text-red-400',
-    manager: 'bg-amber-500/10 text-amber-400',
+    leader: 'bg-amber-500/10 text-amber-400',
     user: 'bg-blue-500/10 text-blue-400'
   }
   return classes[role] || 'bg-gray-500/10 text-gray-400'
@@ -210,6 +229,10 @@ function getRoleClass(role) {
 
 function showCookiesDialog() {
   cookiesDialogRef.value?.open()
+}
+
+function showInviteCodesDialog() {
+  inviteCodesDialogRef.value?.open()
 }
 
 function handleLogout() {

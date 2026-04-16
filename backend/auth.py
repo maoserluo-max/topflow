@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from config import settings
-from models import User, get_db, UserRole
+from models import User, get_db, UserRole, ROLE_HIERARCHY
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -57,12 +57,21 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 
 
 async def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != UserRole.ADMIN:
+    """系统管理员或管理员权限"""
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="权限不足，需要管理员权限")
     return current_user
 
 
-async def get_current_manager_or_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
+async def get_current_super_admin(current_user: User = Depends(get_current_user)) -> User:
+    """仅系统管理员权限"""
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="权限不足，需要系统管理员权限")
+    return current_user
+
+
+async def get_current_leader_or_above(current_user: User = Depends(get_current_user)) -> User:
+    """组长或以上权限"""
+    if ROLE_HIERARCHY.get(current_user.role, 0) < ROLE_HIERARCHY.get(UserRole.LEADER, 0):
         raise HTTPException(status_code=403, detail="权限不足")
     return current_user

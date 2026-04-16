@@ -26,6 +26,7 @@
             </div>
 
             <form @submit.prevent="handleSubmit" class="space-y-8">
+              <!-- 视频链接 -->
               <div class="space-y-4">
                 <div class="flex items-center gap-3">
                   <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-blue to-cyber-purple"></span>
@@ -56,6 +57,7 @@
                 </div>
               </div>
 
+              <!-- 基本信息 -->
               <div class="space-y-4">
                 <div class="flex items-center gap-3">
                   <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-blue to-cyber-purple"></span>
@@ -97,33 +99,23 @@
                     </select>
                   </div>
                   <div class="space-y-1.5">
-                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">平台 *</label>
-                    <select
-                      v-model="form.platform"
-                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
-                    >
-                      <option value="tiktok" class="dark:bg-gray-900 bg-white">TikTok</option>
-                      <option value="ins" class="dark:bg-gray-900 bg-white">Instagram</option>
-                      <option value="youtube" class="dark:bg-gray-900 bg-white">YouTube</option>
-                    </select>
-                  </div>
-                  <div class="space-y-1.5">
-                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">地区</label>
-                    <select
-                      v-model="form.region"
-                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
-                    >
-                      <option value="" class="dark:bg-gray-900 bg-white">选择地区</option>
-                      <option v-for="r in regionOptions" :key="r.value" :value="r.value" class="dark:bg-gray-900 bg-white">{{ r.label }}</option>
-                    </select>
-                  </div>
-                  <div class="space-y-1.5">
-                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">达人名称 *</label>
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">内容方向</label>
+                    <div class="flex gap-2">
+                      <select
+                        v-model="contentDirectionSelect"
+                        @change="onContentDirectionSelect"
+                        class="flex-1 px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+                      >
+                        <option value="" class="dark:bg-gray-900 bg-white">选择方向</option>
+                        <option v-for="d in directionOptions" :key="d" :value="d" class="dark:bg-gray-900 bg-white">{{ d }}</option>
+                        <option value="__custom__" class="dark:bg-gray-900 bg-white">+ 自定义输入</option>
+                      </select>
+                    </div>
                     <input
-                      v-model="form.influencer_name"
+                      v-if="contentDirectionSelect === '__custom__'"
+                      v-model="form.content_direction"
                       type="text"
-                      required
-                      placeholder="输入达人名称"
+                      placeholder="输入自定义内容方向"
                       class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
                     />
                   </div>
@@ -136,42 +128,6 @@
                       placeholder="0.00"
                       class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
                     />
-                  </div>
-                  <div class="space-y-1.5 md:col-span-2">
-                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">视频标题</label>
-                    <input
-                      v-model="form.title"
-                      type="text"
-                      placeholder="视频标题（可选）"
-                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
-                    />
-                  </div>
-                  <div class="space-y-1.5">
-                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">发布日期</label>
-                    <input
-                      v-model="form.publish_date"
-                      type="date"
-                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
-                    />
-                  </div>
-                  <div class="space-y-1.5">
-                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">状态</label>
-                    <select
-                      v-model="form.status"
-                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
-                    >
-                      <option v-for="s in statusOptions" :key="s.value" :value="s.value" class="dark:bg-gray-900 bg-white">{{ s.label }}</option>
-                    </select>
-                  </div>
-                  <div class="space-y-1.5">
-                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">内容方向</label>
-                    <select
-                      v-model="form.content_direction"
-                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
-                    >
-                      <option value="" class="dark:bg-gray-900 bg-white">选择方向</option>
-                      <option v-for="d in directionOptions" :key="d.value" :value="d.value" class="dark:bg-gray-900 bg-white">{{ d.label }}</option>
-                    </select>
                   </div>
                   <div class="space-y-1.5">
                     <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">负责人</label>
@@ -190,13 +146,133 @@
                       class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 opacity-50 cursor-not-allowed"
                     />
                   </div>
+                  <div class="space-y-1.5">
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">状态</label>
+                    <select
+                      v-model="form.status"
+                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+                    >
+                      <option v-for="s in statusOptions" :key="s.value" :value="s.value" class="dark:bg-gray-900 bg-white">{{ s.label }}</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
+              <!-- 视频类型 -->
+              <div class="space-y-4">
+                <div class="flex items-center gap-3">
+                  <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-violet-500 to-purple-500"></span>
+                  <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">视频类型（可多选）</h3>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="t in videoTypeOptions"
+                    :key="t"
+                    type="button"
+                    @click="toggleVideoType(t)"
+                    class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 border"
+                    :class="selectedVideoTypes.includes(t)
+                      ? 'dark:bg-violet-500/20 dark:text-violet-300 dark:border-violet-500/40 bg-violet-50 text-violet-600 border-violet-300 shadow-sm'
+                      : 'dark:bg-white/5 dark:text-gray-400 dark:border-white/10 dark:hover:bg-white/10 dark:hover:text-gray-300 bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-700'"
+                  >
+                    <span v-if="selectedVideoTypes.includes(t)" class="mr-1">✓</span>
+                    {{ t }}
+                  </button>
+                </div>
+                <div class="flex gap-2 items-center">
+                  <input
+                    v-model="customVideoType"
+                    type="text"
+                    placeholder="输入自定义类型并回车添加"
+                    class="flex-1 px-4 py-2.5 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all text-sm"
+                    @keydown.enter.prevent="addCustomVideoType"
+                  />
+                  <button
+                    type="button"
+                    @click="addCustomVideoType"
+                    :disabled="!customVideoType.trim()"
+                    class="px-4 py-2.5 rounded-xl text-sm font-medium dark:bg-violet-500/10 dark:text-violet-400 dark:hover:bg-violet-500/20 bg-violet-50 text-violet-600 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    添加
+                  </button>
+                </div>
+              </div>
+
+              <!-- 属性信息 -->
+              <div class="space-y-4">
+                <div class="flex items-center gap-3">
+                  <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-amber-500 to-orange-500"></span>
+                  <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">属性信息</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div class="space-y-1.5">
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">平台 *</label>
+                    <select
+                      v-model="form.platform"
+                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all"
+                    >
+                      <option value="tiktok" class="dark:bg-gray-900 bg-white">TikTok</option>
+                      <option value="ins" class="dark:bg-gray-900 bg-white">Instagram</option>
+                      <option value="youtube" class="dark:bg-gray-900 bg-white">YouTube</option>
+                    </select>
+                  </div>
+                  <div class="space-y-1.5">
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">地区</label>
+                    <select
+                      v-model="form.region"
+                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all"
+                    >
+                      <option value="" class="dark:bg-gray-900 bg-white">选择地区</option>
+                      <option v-for="r in regionOptions" :key="r.value" :value="r.value" class="dark:bg-gray-900 bg-white">{{ r.label }}</option>
+                    </select>
+                  </div>
+                  <div class="space-y-1.5">
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">达人名称 *</label>
+                    <input
+                      v-model="form.influencer_name"
+                      type="text"
+                      required
+                      placeholder="输入达人名称"
+                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all"
+                    />
+                  </div>
+                  <div class="space-y-1.5">
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">邮箱</label>
+                    <input v-model="form.contact_email" type="email" placeholder="联系邮箱地址" class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all" />
+                  </div>
+                  <div class="space-y-1.5">
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">WhatsApp</label>
+                    <input v-model="form.contact_whatsapp" type="tel" placeholder="WhatsApp号码" class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- 内容信息 -->
               <div class="space-y-4">
                 <div class="flex items-center gap-3">
                   <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-green to-emerald-500"></span>
-                  <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">互动数据</h3>
+                  <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">内容信息</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div class="space-y-1.5 md:col-span-2">
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">视频标题</label>
+                    <input
+                      v-model="form.title"
+                      type="text"
+                      placeholder="视频标题（可选）"
+                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-green/50 focus:outline-none focus:ring-2 focus:ring-cyber-green/20 transition-all"
+                    />
+                  </div>
+                  <div class="space-y-1.5">
+                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">发布日期</label>
+                    <input
+                      v-model="form.publish_date"
+                      type="date"
+                      class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-green/50 focus:outline-none focus:ring-2 focus:ring-cyber-green/20 transition-all"
+                    />
+                  </div>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
@@ -215,24 +291,6 @@
                   <div class="space-y-1.5">
                     <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">分享数</label>
                     <input v-model.number="form.share_count" type="number" class="w-full px-4 py-2.5 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 bg-white border border-gray-200 text-gray-700 focus:border-cyber-green/50 focus:outline-none focus:ring-2 focus:ring-cyber-green/20 transition-all" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="space-y-4">
-                <div class="flex items-center gap-3">
-                  <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-pink-500 to-rose-500"></span>
-                  <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">联系方式</h3>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div class="space-y-1.5">
-                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">邮箱</label>
-                    <input v-model="form.contact_email" type="email" placeholder="联系邮箱地址" class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all" />
-                  </div>
-                  <div class="space-y-1.5">
-                    <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">WhatsApp</label>
-                    <input v-model="form.contact_whatsapp" type="tel" placeholder="WhatsApp号码" class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all" />
                   </div>
                 </div>
               </div>
@@ -286,7 +344,7 @@ const fetching = ref(false)
 
 const currentUser = computed(() => userStore.user?.username || '')
 const userRole = computed(() => userStore.user?.role || '')
-const canSelectAllUsers = computed(() => ['admin', 'manager'].includes(userRole.value))
+const canSelectAllUsers = computed(() => ['super_admin', 'admin', 'leader'].includes(userRole.value))
 const availableProjects = computed(() => userStore.userProjects)
 
 const regionOptions = [
@@ -298,10 +356,17 @@ const regionOptions = [
   { value: 'JP', label: '日本 (JP)' }
 ]
 
-const directionOptions = [
-  { value: 'FF', label: 'Free Fire' },
-  { value: 'MLBB', label: 'Mobile Legends' }
-]
+const defaultDirectionOptions = ['Free Fire', 'Mobile Legends']
+
+// 视频类型预设选项
+const defaultVideoTypeOptions = ['高光混剪', '游戏解说', '纯画面展示', '特效/卡点', '真人', '剧情', '整蛊']
+
+// 动态收集所有出现过的内容方向和视频类型
+const allDirectionOptions = ref([...defaultDirectionOptions])
+const allVideoTypeOptions = ref([...defaultVideoTypeOptions])
+
+const directionOptions = computed(() => allDirectionOptions.value)
+const videoTypeOptions = computed(() => allVideoTypeOptions.value)
 
 const statusOptions = [
   { value: 'pending_review', label: '待审核' },
@@ -316,6 +381,7 @@ const defaultForm = {
   platform: 'tiktok',
   region: '',
   content_direction: '',
+  video_types: '',
   influencer_name: '',
   price_usd: null,
   title: '',
@@ -333,6 +399,66 @@ const defaultForm = {
 
 const form = reactive({ ...defaultForm })
 
+// 视频类型多选
+const selectedVideoTypes = ref([])
+const customVideoType = ref('')
+
+// 内容方向选择
+const contentDirectionSelect = ref('')
+
+function onContentDirectionSelect() {
+  if (contentDirectionSelect.value === '__custom__') {
+    form.content_direction = ''
+  } else {
+    form.content_direction = contentDirectionSelect.value
+  }
+}
+
+function toggleVideoType(type) {
+  const idx = selectedVideoTypes.value.indexOf(type)
+  if (idx >= 0) {
+    selectedVideoTypes.value.splice(idx, 1)
+  } else {
+    selectedVideoTypes.value.push(type)
+  }
+  form.video_types = selectedVideoTypes.value.join(',')
+}
+
+function addCustomVideoType() {
+  const val = customVideoType.value.trim()
+  if (!val) return
+  if (!allVideoTypeOptions.value.includes(val)) {
+    allVideoTypeOptions.value.push(val)
+  }
+  if (!selectedVideoTypes.value.includes(val)) {
+    selectedVideoTypes.value.push(val)
+    form.video_types = selectedVideoTypes.value.join(',')
+  }
+  customVideoType.value = ''
+}
+
+// 从已有视频数据中收集所有出现过的选项
+function collectOptionsFromVideos(videos) {
+  if (!videos) return
+  const directions = new Set(allDirectionOptions.value)
+  const types = new Set(allVideoTypeOptions.value)
+  for (const v of videos) {
+    if (v.content_direction && !defaultDirectionOptions.includes(v.content_direction)) {
+      directions.add(v.content_direction)
+    }
+    if (v.video_types) {
+      for (const t of v.video_types.split(',')) {
+        const trimmed = t.trim()
+        if (trimmed && !defaultVideoTypeOptions.includes(trimmed)) {
+          types.add(trimmed)
+        }
+      }
+    }
+  }
+  allDirectionOptions.value = [...directions]
+  allVideoTypeOptions.value = [...types]
+}
+
 watch(() => props.visible, (val) => {
   if (val) {
     if (props.isEdit && props.editData) {
@@ -342,6 +468,7 @@ watch(() => props.visible, (val) => {
         platform: props.editData.platform,
         region: props.editData.region,
         content_direction: props.editData.content_direction,
+        video_types: props.editData.video_types || '',
         influencer_name: props.editData.influencer_name,
         price_usd: props.editData.price_usd,
         title: props.editData.title,
@@ -356,6 +483,26 @@ watch(() => props.visible, (val) => {
         contact_whatsapp: props.editData.contact_whatsapp,
         status: props.editData.status
       })
+      // 解析 video_types 到 selectedVideoTypes
+      selectedVideoTypes.value = form.video_types ? form.video_types.split(',').map(s => s.trim()).filter(Boolean) : []
+      // 设置 contentDirectionSelect
+      if (form.content_direction && allDirectionOptions.value.includes(form.content_direction)) {
+        contentDirectionSelect.value = form.content_direction
+      } else if (form.content_direction) {
+        // 已有的自定义值，加入选项
+        allDirectionOptions.value.push(form.content_direction)
+        contentDirectionSelect.value = form.content_direction
+      } else {
+        contentDirectionSelect.value = ''
+      }
+      // 收集已有视频类型
+      if (form.video_types) {
+        for (const t of selectedVideoTypes.value) {
+          if (!allVideoTypeOptions.value.includes(t)) {
+            allVideoTypeOptions.value.push(t)
+          }
+        }
+      }
     } else {
       codeManuallyEdited = false
       Object.assign(form, {
@@ -364,6 +511,8 @@ watch(() => props.visible, (val) => {
         publish_date: new Date().toISOString().split('T')[0],
         contact_person: canSelectAllUsers.value ? '' : currentUser.value
       })
+      selectedVideoTypes.value = []
+      contentDirectionSelect.value = ''
     }
   }
 })
@@ -471,6 +620,9 @@ watch([() => form.region, () => form.content_direction, () => form.publish_date]
     console.error('Generate code error:', e)
   }
 })
+
+// 暴露收集方法给父组件
+defineExpose({ collectOptionsFromVideos })
 </script>
 
 <style scoped>

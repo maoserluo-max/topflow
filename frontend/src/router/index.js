@@ -39,13 +39,13 @@ const routes = [
         path: 'users',
         name: 'Users',
         component: () => import('@/views/Users.vue'),
-        meta: { title: '用户管理', roles: ['admin'] }
+        meta: { title: '用户管理', roles: ['super_admin', 'admin'] }
       },
       {
         path: 'logs',
         name: 'Logs',
         component: () => import('@/views/Logs.vue'),
-        meta: { title: '操作日志', roles: ['admin'] }
+        meta: { title: '操作日志', roles: ['super_admin'] }
       }
     ]
   }

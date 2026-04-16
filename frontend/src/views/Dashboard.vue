@@ -3,9 +3,19 @@
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-4xl font-bold gradient-text mb-2">数据总览</h1>
-        <p class="text-sm dark:text-gray-400 text-gray-500">实时监控您的达人营销数据</p>
       </div>
       <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+          <button
+            v-for="p in userProjects"
+            :key="p"
+            @click="switchProject(p)"
+            class="project-btn"
+            :class="{ 'project-btn-active': currentProject === p }"
+          >
+            {{ p }}
+          </button>
+        </div>
         <el-date-picker
           v-model="dateRange"
           type="daterange"
@@ -20,6 +30,18 @@
       </div>
     </div>
 
+    <div class="flex flex-wrap gap-1.5">
+      <button
+        v-for="shortcut in dateShortcuts"
+        :key="shortcut.label"
+        @click="applyDateShortcut(shortcut)"
+        class="shortcut-btn"
+        :class="{ 'shortcut-btn-active': activeShortcut === shortcut.label }"
+      >
+        {{ shortcut.label }}
+      </button>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div
         v-for="(stat, index) in stats"
@@ -29,16 +51,10 @@
       >
         <div class="flex items-start justify-between">
           <div class="space-y-3">
-            <div
-              class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 group-hover:scale-110"
-              :style="{ background: `linear-gradient(135deg, ${stat.color}20, ${stat.color}10)`, color: stat.color }"
-            >
-              <component :is="stat.icon" />
-            </div>
             <div>
               <p class="text-xs uppercase tracking-wider font-medium dark:text-gray-400 text-gray-500">{{ stat.title }}</p>
               <p class="text-3xl font-bold mt-1 dark:bg-gradient-to-r dark:from-white dark:to-gray-300 bg-gradient-to-r from-gray-800 to-gray-500 bg-clip-text text-transparent">
-                {{ formatNumber(stat.value) }}
+                {{ stat.format ? stat.format(stat.value) : formatNumber(stat.value) }}
               </p>
             </div>
           </div>
@@ -55,10 +71,18 @@
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-lg font-semibold flex items-center gap-2 dark:text-white text-gray-900">
             <span class="w-2 h-2 rounded-full bg-cyber-blue animate-pulse"></span>
-            视频数据趋势
+            视频数量趋势
           </h3>
           <div class="flex gap-2">
-            <span class="px-3 py-1 text-xs rounded-full bg-cyber-blue/10 text-cyber-blue border border-cyber-blue/20">实时</span>
+            <button
+              v-for="u in trendUnits"
+              :key="u.value"
+              @click="trendUnit = u.value; fetchTrend()"
+              class="trend-unit-btn"
+              :class="{ 'trend-unit-btn-active': trendUnit === u.value }"
+            >
+              {{ u.label }}
+            </button>
           </div>
         </div>
         <div ref="trendChart" style="height: 380px;" class="mt-4" />
@@ -135,31 +159,61 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import api from '@/utils/api'
 import * as echarts from 'echarts'
 import { useThemeStore } from '@/stores/theme'
+import { useUserStore } from '@/stores/user'
 
 const themeStore = useThemeStore()
+const userStore = useUserStore()
+
 const dateRange = ref([])
+const activeShortcut = ref('')
+const currentProject = ref('')
+const trendUnit = ref('day')
+
+const userProjects = computed(() => userStore.userProjects)
+
 const stats = ref([
-  { title: '总视频数', value: 0, icon: 'VideoPlay', color: '#00d4ff' },
-  { title: '总播放量', value: 0, icon: 'View', color: '#a855f7' },
-  { title: '总点赞数', value: 0, icon: 'Star', color: '#ec4899' },
-  { title: '总金额($)', value: 0, icon: 'Money', color: '#10b981' }
+  { title: '视频数', value: 0, color: '#00d4ff' },
+  { title: '播放量', value: 0, color: '#a855f7' },
+  { title: '金额($)', value: 0, color: '#10b981', format: (v) => v ? Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00' },
+  { title: 'CPM', value: 0, color: '#ec4899', format: (v) => v.toFixed(2) }
 ])
+
+const trendUnits = [
+  { label: '天', value: 'day' },
+  { label: '周', value: 'week' },
+  { label: '月', value: 'month' }
+]
 
 const recentVideos = ref([])
 const cachedPlatformData = ref({})
 const cachedRegionData = ref({})
+const trendData = ref([])
 
 let trendChartInstance = null
 let platformChartInstance = null
 const trendChart = ref(null)
 const platformChart = ref(null)
 
+const dateShortcuts = [
+  { label: '本周', getValue: () => { const now = new Date(); const day = now.getDay() || 7; const mon = new Date(now); mon.setDate(now.getDate() - day + 1); return [fmt(mon), fmt(now)]; } },
+  { label: '上周', getValue: () => { const now = new Date(); const day = now.getDay() || 7; const mon = new Date(now); mon.setDate(now.getDate() - day - 6); const sun = new Date(mon); sun.setDate(mon.getDate() + 6); return [fmt(mon), fmt(sun)]; } },
+  { label: '本月', getValue: () => { const now = new Date(); const first = new Date(now.getFullYear(), now.getMonth(), 1); return [fmt(first), fmt(now)]; } },
+  { label: '上月', getValue: () => { const now = new Date(); const first = new Date(now.getFullYear(), now.getMonth() - 1, 1); const last = new Date(now.getFullYear(), now.getMonth(), 0); return [fmt(first), fmt(last)]; } },
+  { label: '本年', getValue: () => { const now = new Date(); const first = new Date(now.getFullYear(), 0, 1); return [fmt(first), fmt(now)]; } }
+]
+
+function fmt(d) { return d.toISOString().split('T')[0] }
+
 onMounted(() => {
+  if (userProjects.value.length > 0) {
+    currentProject.value = userProjects.value[0]
+  }
   fetchStats()
+  fetchTrend()
 
   if (trendChart.value) {
     trendChartInstance = echarts.init(trendChart.value)
@@ -179,13 +233,26 @@ onUnmounted(() => {
 })
 
 watch(() => themeStore.isDark, () => {
-  updateTrendChart(cachedPlatformData.value)
-  updatePlatformChart(cachedPlatformData.value, cachedRegionData.value)
+  updateTrendChart()
+  updatePlatformChart()
 })
 
 function handleResize() {
   trendChartInstance?.resize()
   platformChartInstance?.resize()
+}
+
+function switchProject(p) {
+  currentProject.value = p
+  fetchStats()
+  fetchTrend()
+}
+
+function applyDateShortcut(shortcut) {
+  activeShortcut.value = shortcut.label
+  dateRange.value = shortcut.getValue()
+  fetchStats()
+  fetchTrend()
 }
 
 async function fetchStats() {
@@ -195,23 +262,48 @@ async function fetchStats() {
       params.start_date = dateRange.value[0]
       params.end_date = dateRange.value[1]
     }
+    if (currentProject.value) {
+      params.project = currentProject.value
+    }
 
     const response = await api.get('/videos/dashboard/stats', { params })
 
+    const totalPlays = response.total_plays || 0
+    const totalAmount = response.total_amount || 0
+    const cpm = totalPlays > 0 ? (totalAmount / totalPlays) * 1000 : 0
+
     stats.value[0].value = response.total_videos
     stats.value[1].value = response.total_plays
-    stats.value[2].value = response.total_likes
-    stats.value[3].value = response.total_amount
+    stats.value[2].value = response.total_amount
+    stats.value[3].value = cpm
 
     recentVideos.value = response.recent_videos || []
 
     cachedPlatformData.value = response.videos_by_platform
     cachedRegionData.value = response.videos_by_region
 
-    updateTrendChart(response.videos_by_platform)
-    updatePlatformChart(response.videos_by_platform, response.videos_by_region)
+    updatePlatformChart()
   } catch (error) {
     console.error('Fetch stats error:', error)
+  }
+}
+
+async function fetchTrend() {
+  try {
+    const params = { unit: trendUnit.value }
+    if (dateRange.value && dateRange.value.length === 2) {
+      params.start_date = dateRange.value[0]
+      params.end_date = dateRange.value[1]
+    }
+    if (currentProject.value) {
+      params.project = currentProject.value
+    }
+
+    const response = await api.get('/videos/dashboard/trend', { params })
+    trendData.value = response || []
+    updateTrendChart()
+  } catch (error) {
+    console.error('Fetch trend error:', error)
   }
 }
 
@@ -242,10 +334,13 @@ function getThemeColors() {
   }
 }
 
-function updateTrendChart(platformData) {
+function updateTrendChart() {
   if (!trendChartInstance) return
 
   const tc = getThemeColors()
+
+  const dates = trendData.value.map(d => d.date)
+  const counts = trendData.value.map(d => d.count)
 
   const option = {
     backgroundColor: tc.bgColor,
@@ -254,47 +349,60 @@ function updateTrendChart(platformData) {
       backgroundColor: tc.tooltipBg,
       borderColor: tc.tooltipBorder,
       borderWidth: 1,
-      textStyle: { color: tc.textColor }
+      textStyle: { color: tc.textColor },
+      formatter: (params) => {
+        const p = params[0]
+        return `${p.axisValue}<br/>视频数量: <b>${p.value}</b>`
+      }
     },
-    legend: {
-      data: Object.keys(platformData),
-      textStyle: { color: tc.subTextColor },
-      top: 0
-    },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
     xAxis: {
       type: 'category',
-      data: ['视频数量'],
+      data: dates,
       axisLine: { lineStyle: { color: tc.axisLineColor } },
-      axisLabel: { color: tc.subTextColor }
+      axisLabel: { color: tc.subTextColor, rotate: dates.length > 15 ? 45 : 0 }
     },
     yAxis: {
       type: 'value',
+      name: '视频个数',
+      nameTextStyle: { color: tc.subTextColor, fontSize: 12 },
       axisLine: { show: false },
       splitLine: { lineStyle: { color: tc.splitLineColor } },
       axisLabel: { color: tc.subTextColor }
     },
-    series: Object.entries(platformData).map(([name, value], index) => ({
-      name,
-      type: 'bar',
-      data: [value],
-      itemStyle: {
-        borderRadius: [8, 8, 0, 0],
-        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: ['#00d4ff', '#a855f7', '#ec4899', '#10b981'][index % 4] },
-          { offset: 1, color: ['rgba(0,212,255,0.2)', 'rgba(168,85,247,0.2)', 'rgba(236,72,153,0.2)', 'rgba(16,185,129,0.2)'][index % 4] }
+    series: [{
+      type: 'line',
+      data: counts,
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      lineStyle: {
+        width: 3,
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: '#00d4ff' },
+          { offset: 1, color: '#a855f7' }
         ])
       },
-      barWidth: '40%'
-    }))
+      itemStyle: {
+        color: '#00d4ff',
+        borderWidth: 2
+      },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(0, 212, 255, 0.25)' },
+          { offset: 1, color: 'rgba(0, 212, 255, 0.02)' }
+        ])
+      }
+    }]
   }
 
   trendChartInstance.setOption(option, true)
 }
 
-function updatePlatformChart(platformData, regionData) {
+function updatePlatformChart() {
   if (!platformChartInstance) return
 
+  const platformData = cachedPlatformData.value
   const tc = getThemeColors()
 
   const option = {
@@ -367,3 +475,104 @@ function getPlatformClass(platform) {
   return classes[platform] || 'dark:bg-gray-500/10 dark:text-gray-300 dark:border-gray-500/20 bg-gray-100 text-gray-600 border border-gray-200'
 }
 </script>
+
+<style scoped>
+.project-btn {
+  padding: 6px 18px;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.dark .project-btn {
+  background: rgba(255,255,255,0.05);
+  color: #9ca3af;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.project-btn {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+.dark .project-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border-color: rgba(255,255,255,0.2);
+}
+.project-btn:hover {
+  background: #e5e7eb;
+  color: #111827;
+  border-color: #d1d5db;
+}
+.project-btn-active {
+  background: linear-gradient(to right, #4f46e5, #4338ca) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 14px rgba(79,70,229,0.25);
+}
+
+.shortcut-btn {
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.dark .shortcut-btn {
+  background: rgba(255,255,255,0.05);
+  color: #9ca3af;
+}
+.shortcut-btn {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.dark .shortcut-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+.shortcut-btn:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+.shortcut-btn-active {
+  background: rgba(59,130,246,0.15) !important;
+  color: #3b82f6 !important;
+}
+.dark .shortcut-btn-active {
+  background: rgba(59,130,246,0.2) !important;
+  color: #60a5fa !important;
+}
+
+.trend-unit-btn {
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.dark .trend-unit-btn {
+  background: rgba(255,255,255,0.05);
+  color: #9ca3af;
+}
+.trend-unit-btn {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.dark .trend-unit-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+.trend-unit-btn:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+.trend-unit-btn-active {
+  background: rgba(0, 212, 255, 0.15) !important;
+  color: #00d4ff !important;
+}
+.dark .trend-unit-btn-active {
+  background: rgba(0, 212, 255, 0.2) !important;
+  color: #00d4ff !important;
+}
+</style>

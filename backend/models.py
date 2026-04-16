@@ -13,9 +13,19 @@ Base = declarative_base()
 
 
 class UserRole(str, enum.Enum):
+    SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
-    MANAGER = "manager"
+    LEADER = "leader"
     USER = "user"
+
+
+# 角色层级：数值越大权限越高
+ROLE_HIERARCHY = {
+    UserRole.SUPER_ADMIN: 4,
+    UserRole.ADMIN: 3,
+    UserRole.LEADER: 2,
+    UserRole.USER: 1,
+}
 
 
 class User(Base):
@@ -27,6 +37,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(100))
     role = Column(SQLEnum(UserRole), default=UserRole.USER)
+    parent_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     projects = Column(String(200), default="Gamoji,Poseme,内容孵化")
     created_at = Column(DateTime, default=_utcnow)
@@ -34,6 +45,7 @@ class User(Base):
 
     videos = relationship("Video", back_populates="creator")
     operation_logs = relationship("OperationLog", back_populates="user")
+    parent = relationship("User", remote_side=[id], foreign_keys=[parent_id], backref="children")
 
 
 class Video(Base):
@@ -45,6 +57,7 @@ class Video(Base):
     platform = Column(String(20), nullable=False)
     region = Column(String(50))
     content_direction = Column(String(100))
+    video_types = Column(String(200))
     influencer_name = Column(String(100), nullable=False)
     price_usd = Column(Float)
     title = Column(Text)
@@ -97,6 +110,8 @@ class InviteCode(Base):
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(20), unique=True, index=True, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    projects = Column(String(200))
+    register_role = Column(String(20), default="user")
     used_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     used_at = Column(DateTime, nullable=True)
     is_used = Column(Boolean, default=False)
@@ -191,6 +206,10 @@ def init_db():
             conn.execute(text("ALTER TABLE videos ADD COLUMN project VARCHAR(50) DEFAULT 'Gamoji'"))
             conn.commit()
             print("✅ 已添加 project 列")
+        if 'video_types' not in existing_columns:
+            conn.execute(text("ALTER TABLE videos ADD COLUMN video_types VARCHAR(200)"))
+            conn.commit()
+            print("✅ 已添加 video_types 列")
 
         result = conn.execute(text("PRAGMA table_info(users)"))
         existing_columns = {row[1] for row in result}
@@ -198,6 +217,25 @@ def init_db():
             conn.execute(text("ALTER TABLE users ADD COLUMN projects VARCHAR(200) DEFAULT 'Gamoji,Poseme,内容孵化'"))
             conn.commit()
             print("✅ 已添加 projects 列")
+        if 'parent_id' not in existing_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN parent_id INTEGER REFERENCES users(id)"))
+            conn.commit()
+            print("✅ 已添加 parent_id 列")
+
+        # 迁移旧角色：admin -> super_admin，manager -> leader
+        result = conn.execute(text("SELECT COUNT(*) FROM users WHERE role = 'admin'"))
+        admin_count = result.fetchone()[0]
+        if admin_count > 0:
+            conn.execute(text("UPDATE users SET role = 'super_admin' WHERE role = 'admin' AND username = 'admin'"))
+            conn.execute(text("UPDATE users SET role = 'admin' WHERE role = 'admin' AND username != 'admin'"))
+            conn.commit()
+            print("✅ 已迁移 admin 角色到 super_admin/admin")
+        result = conn.execute(text("SELECT COUNT(*) FROM users WHERE role = 'manager'"))
+        manager_count = result.fetchone()[0]
+        if manager_count > 0:
+            conn.execute(text("UPDATE users SET role = 'leader' WHERE role = 'manager'"))
+            conn.commit()
+            print("✅ 已迁移 manager 角色到 leader")
 
     with engine.connect() as conn:
         result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='invite_codes'"))
@@ -216,5 +254,18 @@ def init_db():
             conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_invite_codes_code ON invite_codes (code)"))
             conn.commit()
             print("✅ 已创建 invite_codes 表")
+
+    # 邀请码表新增字段
+    with engine.connect() as conn:
+        result = conn.execute(text("PRAGMA table_info(invite_codes)"))
+        existing_columns = {row[1] for row in result}
+        if 'projects' not in existing_columns:
+            conn.execute(text("ALTER TABLE invite_codes ADD COLUMN projects VARCHAR(200)"))
+            conn.commit()
+            print("✅ 已添加 invite_codes.projects 列")
+        if 'register_role' not in existing_columns:
+            conn.execute(text("ALTER TABLE invite_codes ADD COLUMN register_role VARCHAR(20) DEFAULT 'user'"))
+            conn.commit()
+            print("✅ 已添加 invite_codes.register_role 列")
 
     print(f"✅ 数据库已初始化: {DATABASE_URL}")

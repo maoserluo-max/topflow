@@ -44,7 +44,7 @@ def create_default_admin():
                 email="admin@topflow.com",
                 hashed_password=get_password_hash("admin123"),
                 full_name="系统管理员",
-                role=UserRole.ADMIN,
+                role=UserRole.SUPER_ADMIN,
                 is_active=True
             )
             db.add(admin_user)

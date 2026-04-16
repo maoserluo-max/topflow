@@ -7,8 +7,9 @@ export const useUserStore = defineStore('user', () => {
   const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
 
   const isLoggedIn = computed(() => !!token.value)
-  const isAdmin = computed(() => user.value?.role === 'admin')
-  const isManager = computed(() => ['admin', 'manager'].includes(user.value?.role))
+  const isSuperAdmin = computed(() => user.value?.role === 'super_admin')
+  const isAdmin = computed(() => ['super_admin', 'admin'].includes(user.value?.role))
+  const isLeaderOrAbove = computed(() => ['super_admin', 'admin', 'leader'].includes(user.value?.role))
   const userProjects = computed(() => {
     if (!user.value?.projects) return ['Gamoji', 'Poseme', '内容孵化']
     return user.value.projects.split(',').map(p => p.trim()).filter(p => p)
@@ -60,8 +61,9 @@ export const useUserStore = defineStore('user', () => {
     token,
     user,
     isLoggedIn,
+    isSuperAdmin,
     isAdmin,
-    isManager,
+    isLeaderOrAbove,
     userProjects,
     login,
     register,

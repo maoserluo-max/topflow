@@ -175,27 +175,30 @@
                   {{ video.project || '-' }}
                 </span>
               </td>
+              <td class="text-sm dark:text-gray-300 text-gray-700 whitespace-nowrap">{{ video.content_direction || '-' }}</td>
+              <td class="text-right font-mono text-cyber-green font-semibold whitespace-nowrap">${{ video.price_usd || '0' }}</td>
+              <td class="text-sm dark:text-gray-300 text-gray-700 whitespace-nowrap">{{ video.contact_person || '-' }}</td>
+              <td>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap" :class="getStatusClass(video.status)">
+                  {{ getStatusName(video.status) }}
+                </span>
+              </td>
+              <td class="font-mono text-xs dark:text-gray-400 text-gray-500 whitespace-nowrap">{{ getRegionName(video.region) }}</td>
               <td>
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold tracking-wide whitespace-nowrap" :class="getPlatformClass(video.platform)">
                   {{ video.platform?.toUpperCase() }}
                 </span>
               </td>
-              <td class="font-mono text-xs dark:text-gray-400 text-gray-500 whitespace-nowrap">{{ getRegionName(video.region) }}</td>
               <td class="font-medium dark:text-white text-gray-900 whitespace-nowrap">{{ video.influencer_name }}</td>
+              <td class="text-sm dark:text-gray-300 text-gray-700 whitespace-nowrap">{{ video.contact_email || '-' }}</td>
+              <td class="text-sm dark:text-gray-300 text-gray-700 whitespace-nowrap">{{ video.contact_whatsapp || '-' }}</td>
               <td class="whitespace-nowrap">{{ video.title || '-' }}</td>
-              <td class="text-sm dark:text-gray-300 text-gray-700 whitespace-nowrap">{{ video.contact_person || '-' }}</td>
-              <td class="text-right font-mono text-cyber-green font-semibold whitespace-nowrap">${{ video.price_usd || '0' }}</td>
               <td class="text-sm text-gray-500 whitespace-nowrap">{{ formatDate(video.publish_date) }}</td>
               <td class="text-right font-mono text-cyber-blue whitespace-nowrap">{{ formatNumber(video.play_count) }}</td>
               <td class="text-right font-mono text-pink-400 whitespace-nowrap">{{ formatNumber(video.like_count) }}</td>
               <td class="text-right font-mono text-amber-400 whitespace-nowrap">{{ formatNumber(video.comment_count) }}</td>
               <td class="text-right font-mono text-emerald-400 whitespace-nowrap">{{ formatNumber(video.share_count) }}</td>
               <td class="text-right font-mono text-orange-400 font-semibold whitespace-nowrap">${{ calcCPM(video) }}</td>
-              <td>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap" :class="getStatusClass(video.status)">
-                  {{ getStatusName(video.status) }}
-                </span>
-              </td>
               <td class="whitespace-nowrap">
                 <button
                   v-if="video.video_url"
@@ -245,6 +248,7 @@
     </div>
 
     <VideoFormDialog
+      ref="formDialogRef"
       :visible="dialogVisible"
       :is-edit="isEdit"
       :edit-data="editingVideo"
@@ -269,6 +273,7 @@
               </div>
 
               <div class="space-y-6">
+                <!-- 基本信息 -->
                 <div>
                   <div class="flex items-center gap-3 mb-4">
                     <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-blue to-cyber-purple"></span>
@@ -276,40 +281,56 @@
                   </div>
                   <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div class="detail-field"><span class="detail-label">项目</span><span class="detail-value"><span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold dark:bg-primary-500/15 dark:text-primary-300 dark:border dark:border-primary-500/25 bg-primary-50 text-primary-600 border border-primary-200">{{ detailData?.project || '-' }}</span></span></div>
-                    <div class="detail-field"><span class="detail-label">平台</span><span class="detail-value">{{ detailData?.platform?.toUpperCase() || '-' }}</span></div>
-                    <div class="detail-field"><span class="detail-label">地区</span><span class="detail-value">{{ getRegionName(detailData?.region) }}</span></div>
-                    <div class="detail-field"><span class="detail-label">达人名称</span><span class="detail-value">{{ detailData?.influencer_name || '-' }}</span></div>
-                    <div class="detail-field"><span class="detail-label">内容方向</span><span class="detail-value">{{ getDirectionName(detailData?.content_direction) }}</span></div>
-                    <div class="detail-field"><span class="detail-label">状态</span><span class="detail-value"><span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium" :class="getStatusClass(detailData?.status)">{{ getStatusName(detailData?.status) }}</span></span></div>
+                    <div class="detail-field"><span class="detail-label">视频编号</span><span class="detail-value font-mono dark:text-cyber-blue text-primary-600">{{ detailData?.video_code || '-' }}</span></div>
+                    <div class="detail-field"><span class="detail-label">内容方向</span><span class="detail-value">{{ detailData?.content_direction || '-' }}</span></div>
                     <div class="detail-field"><span class="detail-label">价格</span><span class="detail-value text-cyber-green font-semibold">${{ detailData?.price_usd || '0' }}</span></div>
-                    <div class="detail-field col-span-2 md:col-span-3"><span class="detail-label">标题</span><span class="detail-value">{{ detailData?.title || '-' }}</span></div>
-                    <div class="detail-field col-span-2 md:col-span-3"><span class="detail-label">视频链接</span><a v-if="detailData?.video_url" :href="detailData.video_url" target="_blank" class="detail-value text-cyber-blue hover:underline break-all">{{ detailData.video_url }}</a><span v-else class="detail-value">-</span></div>
+                    <div class="detail-field"><span class="detail-label">负责人</span><span class="detail-value">{{ detailData?.contact_person || '-' }}</span></div>
+                    <div class="detail-field"><span class="detail-label">状态</span><span class="detail-value"><span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium" :class="getStatusClass(detailData?.status)">{{ getStatusName(detailData?.status) }}</span></span></div>
+                  </div>
+                  <div v-if="detailData?.video_types" class="mt-4">
+                    <span class="detail-label">视频类型</span>
+                    <div class="flex flex-wrap gap-2 mt-1.5">
+                      <span
+                        v-for="t in detailData.video_types.split(',').map(s => s.trim()).filter(Boolean)"
+                        :key="t"
+                        class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium dark:bg-violet-500/10 dark:text-violet-400 dark:border dark:border-violet-500/25 bg-violet-50 text-violet-600 border border-violet-200"
+                      >{{ t }}</span>
+                    </div>
                   </div>
                 </div>
 
+                <!-- 属性信息 -->
+                <div>
+                  <div class="flex items-center gap-3 mb-4">
+                    <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-amber-500 to-orange-500"></span>
+                    <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">属性信息</h3>
+                  </div>
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="detail-field"><span class="detail-label">地区</span><span class="detail-value">{{ getRegionName(detailData?.region) }}</span></div>
+                    <div class="detail-field"><span class="detail-label">平台</span><span class="detail-value">{{ detailData?.platform?.toUpperCase() || '-' }}</span></div>
+                    <div class="detail-field"><span class="detail-label">达人名称</span><span class="detail-value">{{ detailData?.influencer_name || '-' }}</span></div>
+                    <div class="detail-field"><span class="detail-label">邮箱</span><span class="detail-value">{{ detailData?.contact_email || '-' }}</span></div>
+                    <div class="detail-field"><span class="detail-label">WhatsApp</span><span class="detail-value">{{ detailData?.contact_whatsapp || '-' }}</span></div>
+                  </div>
+                </div>
+
+                <!-- 内容信息 -->
                 <div>
                   <div class="flex items-center gap-3 mb-4">
                     <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyber-green to-emerald-500"></span>
-                    <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">互动数据</h3>
+                    <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">内容信息</h3>
                   </div>
-                  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="detail-field col-span-2 md:col-span-3"><span class="detail-label">视频标题</span><span class="detail-value">{{ detailData?.title || '-' }}</span></div>
+                    <div class="detail-field"><span class="detail-label">发布日期</span><span class="detail-value">{{ formatDate(detailData?.publish_date) }}</span></div>
                     <div class="detail-field"><span class="detail-label">播放量</span><span class="detail-value font-mono text-cyber-blue">{{ formatNumber(detailData?.play_count) }}</span></div>
                     <div class="detail-field"><span class="detail-label">点赞数</span><span class="detail-value font-mono text-pink-400">{{ formatNumber(detailData?.like_count) }}</span></div>
                     <div class="detail-field"><span class="detail-label">评论数</span><span class="detail-value font-mono text-amber-400">{{ formatNumber(detailData?.comment_count) }}</span></div>
                     <div class="detail-field"><span class="detail-label">分享数</span><span class="detail-value font-mono text-emerald-400">{{ formatNumber(detailData?.share_count) }}</span></div>
                     <div class="detail-field"><span class="detail-label">CPM</span><span class="detail-value font-mono text-orange-400 font-semibold">${{ calcCPM(detailData) }}</span></div>
                   </div>
-                </div>
-
-                <div>
-                  <div class="flex items-center gap-3 mb-4">
-                    <span class="w-1.5 h-5 rounded-full bg-gradient-to-b from-pink-500 to-rose-500"></span>
-                    <h3 class="text-sm font-semibold dark:text-gray-300 text-gray-600 uppercase tracking-wider">联系方式</h3>
-                  </div>
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="detail-field"><span class="detail-label">负责人</span><span class="detail-value">{{ detailData?.contact_person || '-' }}</span></div>
-                    <div class="detail-field"><span class="detail-label">邮箱</span><span class="detail-value">{{ detailData?.contact_email || '-' }}</span></div>
-                    <div class="detail-field"><span class="detail-label">WhatsApp</span><span class="detail-value">{{ detailData?.contact_whatsapp || '-' }}</span></div>
+                  <div class="mt-4">
+                    <div class="detail-field col-span-2 md:col-span-3"><span class="detail-label">视频链接</span><a v-if="detailData?.video_url" :href="detailData.video_url" target="_blank" class="detail-value text-cyber-blue hover:underline break-all">{{ detailData.video_url }}</a><span v-else class="detail-value">-</span></div>
                   </div>
                 </div>
 
@@ -357,19 +378,22 @@ const sortState = reactive({ field: 'publish_date', order: 'desc' })
 const columns = reactive([
   { key: 'video_code', label: '视频编号', width: 130, minWidth: 100, sortable: false, align: 'left', resizable: false },
   { key: 'project', label: '项目', width: 85, minWidth: 65, sortable: false, align: 'center' },
-  { key: 'platform', label: '平台', width: 80, minWidth: 60, sortable: false, align: 'center' },
-  { key: 'region', label: '地区', width: 100, minWidth: 70, sortable: false, align: 'left' },
-  { key: 'influencer_name', label: '达人', width: 110, minWidth: 80, sortable: false, align: 'left' },
-  { key: 'title', label: '标题', width: 180, minWidth: 100, sortable: false, align: 'left' },
-  { key: 'contact_person', label: '负责人', width: 80, minWidth: 60, sortable: false, align: 'left' },
+  { key: 'content_direction', label: '内容方向', width: 110, minWidth: 80, sortable: false, align: 'left' },
   { key: 'price_usd', label: '价格($)', width: 85, minWidth: 65, sortable: true, align: 'right' },
+  { key: 'contact_person', label: '负责人', width: 80, minWidth: 60, sortable: false, align: 'left' },
+  { key: 'status', label: '状态', width: 80, minWidth: 65, sortable: false, align: 'center' },
+  { key: 'region', label: '地区', width: 100, minWidth: 70, sortable: false, align: 'left' },
+  { key: 'platform', label: '平台', width: 80, minWidth: 60, sortable: false, align: 'center' },
+  { key: 'influencer_name', label: '达人', width: 110, minWidth: 80, sortable: false, align: 'left' },
+  { key: 'contact_email', label: '邮箱', width: 150, minWidth: 100, sortable: false, align: 'left' },
+  { key: 'contact_whatsapp', label: 'WhatsApp', width: 110, minWidth: 80, sortable: false, align: 'left' },
+  { key: 'title', label: '标题', width: 180, minWidth: 100, sortable: false, align: 'left' },
   { key: 'publish_date', label: '发布日期', width: 100, minWidth: 80, sortable: true, align: 'left' },
   { key: 'play_count', label: '播放量', width: 90, minWidth: 65, sortable: true, align: 'right' },
   { key: 'like_count', label: '点赞数', width: 85, minWidth: 65, sortable: true, align: 'right' },
   { key: 'comment_count', label: '评论数', width: 85, minWidth: 65, sortable: true, align: 'right' },
   { key: 'share_count', label: '转发数', width: 85, minWidth: 65, sortable: true, align: 'right' },
   { key: 'cpm', label: 'CPM', width: 80, minWidth: 60, sortable: true, align: 'right' },
-  { key: 'status', label: '状态', width: 80, minWidth: 65, sortable: false, align: 'center' },
   { key: 'video_url', label: '查看视频', width: 80, minWidth: 65, sortable: false, align: 'center' },
   { key: 'actions', label: '操作', width: 75, minWidth: 60, sortable: false, align: 'center', resizable: false }
 ])
@@ -387,10 +411,11 @@ const isEdit = ref(false)
 const editingVideo = ref(null)
 const detailVisible = ref(false)
 const detailData = ref(null)
+const formDialogRef = ref(null)
 
 const userRole = computed(() => userStore.user?.role || '')
-const isAdmin = computed(() => userStore.user?.role === 'admin')
-const canSelectAllUsers = computed(() => ['admin', 'manager'].includes(userRole.value))
+const isAdmin = computed(() => ['super_admin', 'admin'].includes(userRole.value))
+const canSelectAllUsers = computed(() => ['super_admin', 'admin', 'leader'].includes(userRole.value))
 const userProjects = computed(() => userStore.userProjects)
 const currentProject = ref('')
 
@@ -406,8 +431,8 @@ const regionOptions = [
 ]
 
 const directionOptions = [
-  { value: 'FF', label: 'Free Fire' },
-  { value: 'MLBB', label: 'Mobile Legends' }
+  'Free Fire',
+  'Mobile Legends'
 ]
 
 const statusOptions = [
@@ -496,6 +521,10 @@ async function fetchVideos() {
     const response = await api.get('/videos/', { params })
     videos.value = response.items || []
     total.value = response.total || 0
+    // 将已有数据传给 VideoFormDialog 用于收集选项
+    if (formDialogRef.value) {
+      formDialogRef.value.collectOptionsFromVideos(videos.value)
+    }
   } catch (error) {
     console.error('Fetch videos error:', error)
   } finally {
@@ -582,7 +611,7 @@ function formatDate(dateStr) { return !dateStr ? '-' : new Date(dateStr).toLocal
 function formatDateTime(dateStr) { return !dateStr ? '-' : new Date(dateStr).toLocaleString('zh-CN') }
 
 function getRegionName(region) { const f = regionOptions.find(r => r.value === region); return f ? f.label : region || '-' }
-function getDirectionName(direction) { const f = directionOptions.find(d => d.value === direction); return f ? f.label : direction || '-' }
+function getDirectionName(direction) { return direction || '-' }
 
 function getPlatformClass(platform) {
   const c = {

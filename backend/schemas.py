@@ -52,6 +52,7 @@ class UserCreate(UserBase):
 class AdminUserCreate(UserBase):
     password: str
     role: Optional[str] = "user"
+    parent_id: Optional[int] = None
     projects: Optional[str] = "Gamoji,Poseme,内容孵化"
 
     @field_validator('password')
@@ -67,9 +68,23 @@ class AdminUserCreate(UserBase):
     @classmethod
     def validate_role(cls, v):
         if v is not None:
-            valid_roles = ['admin', 'manager', 'user']
+            valid_roles = ['super_admin', 'admin', 'leader', 'user']
             if v not in valid_roles:
                 raise ValueError(f'无效的角色，可选值: {", ".join(valid_roles)}')
+        return v
+
+
+class InviteCodeCreate(BaseModel):
+    projects: Optional[str] = None
+    register_role: Optional[str] = "user"
+
+    @field_validator('register_role')
+    @classmethod
+    def validate_register_role(cls, v):
+        if v is not None:
+            valid_roles = ['leader', 'user']
+            if v not in valid_roles:
+                raise ValueError(f'邀请码注册角色只能为: {", ".join(valid_roles)}')
         return v
 
 
@@ -77,6 +92,8 @@ class InviteCodeResponse(BaseModel):
     id: int
     code: str
     created_by: int
+    projects: Optional[str] = None
+    register_role: Optional[str] = "user"
     used_by: Optional[int] = None
     used_at: Optional[datetime] = None
     is_used: bool
@@ -90,6 +107,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     role: Optional[str] = None
+    parent_id: Optional[int] = None
     is_active: Optional[bool] = None
     projects: Optional[str] = None
 
@@ -97,7 +115,7 @@ class UserUpdate(BaseModel):
     @classmethod
     def validate_role(cls, v):
         if v is not None:
-            valid_roles = ['admin', 'manager', 'user']
+            valid_roles = ['super_admin', 'admin', 'leader', 'user']
             if v not in valid_roles:
                 raise ValueError(f'无效的角色，可选值: {", ".join(valid_roles)}')
         return v
@@ -116,6 +134,8 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: int
     role: str
+    parent_id: Optional[int] = None
+    parent_name: Optional[str] = None
     is_active: bool
     projects: Optional[str] = "Gamoji,Poseme,内容孵化"
     created_at: datetime
@@ -141,6 +161,7 @@ class VideoBase(BaseModel):
     platform: str
     region: Optional[str] = None
     content_direction: Optional[str] = None
+    video_types: Optional[str] = None
     influencer_name: str
     price_usd: Optional[float] = None
     title: Optional[str] = None
@@ -207,6 +228,7 @@ class VideoUpdate(BaseModel):
     platform: Optional[str] = None
     region: Optional[str] = None
     content_direction: Optional[str] = None
+    video_types: Optional[str] = None
     influencer_name: Optional[str] = None
     price_usd: Optional[float] = None
     title: Optional[str] = None

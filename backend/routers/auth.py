@@ -4,11 +4,37 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import secrets
 
-from models import get_db, User, UserRole, OperationLog, InviteCode
-from auth import verify_password, get_password_hash, create_access_token, get_current_user, get_current_admin
-from schemas import UserCreate, UserUpdate, UserResponse, Token, LoginRequest, InviteCodeResponse, AdminUserCreate
+from models import get_db, User, UserRole, OperationLog, InviteCode, ROLE_HIERARCHY
+from auth import verify_password, get_password_hash, create_access_token, get_current_user, get_current_admin, get_current_super_admin, get_current_leader_or_above
+from schemas import UserCreate, UserUpdate, UserResponse, Token, LoginRequest, InviteCodeResponse, InviteCodeCreate, AdminUserCreate
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
+
+
+def _get_subordinate_ids(user: User, db: Session) -> list[int]:
+    """递归获取用户所有下属ID（包含自身）"""
+    ids = [user.id]
+    children = db.query(User).filter(User.parent_id == user.id).all()
+    for child in children:
+        ids.extend(_get_subordinate_ids(child, db))
+    return ids
+
+
+def _user_to_response(user: User) -> dict:
+    """User对象转响应dict，附带parent_name"""
+    data = {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": user.role.value if user.role else "user",
+        "parent_id": user.parent_id,
+        "parent_name": user.parent.full_name or user.parent.username if user.parent else None,
+        "is_active": user.is_active,
+        "projects": user.projects,
+        "created_at": user.created_at,
+    }
+    return data
 
 
 @router.post("/register", response_model=UserResponse)
@@ -31,8 +57,10 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         email=user.email,
         hashed_password=get_password_hash(user.password),
         full_name=user.full_name,
-        role=UserRole.USER,
-        is_active=True
+        role=UserRole(invite.register_role) if invite.register_role else UserRole.USER,
+        parent_id=invite.created_by,
+        is_active=True,
+        projects=invite.projects or "Gamoji,Poseme,内容孵化"
     )
     db.add(new_user)
     db.flush()
@@ -91,18 +119,20 @@ def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-@router.get("/users", response_model=list[UserResponse])
+@router.get("/users")
 def get_users(
-    skip: int = 0,
-    limit: int = 100,
     current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    users = db.query(User).offset(skip).limit(limit).all()
-    return users
+    if current_user.role == UserRole.SUPER_ADMIN:
+        users = db.query(User).all()
+    else:
+        subordinate_ids = _get_subordinate_ids(current_user, db)
+        users = db.query(User).filter(User.id.in_(subordinate_ids)).all()
+    return [_user_to_response(u) for u in users]
 
 
-@router.put("/users/{user_id}", response_model=UserResponse)
+@router.put("/users/{user_id}")
 def update_user(
     user_id: int,
     user_update: UserUpdate,
@@ -113,9 +143,29 @@ def update_user(
     if not db_user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
+    # 不能修改比自己权限高的用户
+    if ROLE_HIERARCHY.get(db_user.role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0) and db_user.id != current_user.id:
+        raise HTTPException(status_code=403, detail="不能修改同级或更高级别的用户")
+
+    # admin不能修改super_admin，leader不能修改admin及以上
+    if current_user.role == UserRole.ADMIN and db_user.role == UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="管理员不能修改系统管理员")
+
     update_data = user_update.dict(exclude_unset=True)
     if "role" in update_data and update_data["role"]:
-        update_data["role"] = UserRole(update_data["role"])
+        new_role = UserRole(update_data["role"])
+        # 不能将用户角色提升到等于或高于自身
+        if ROLE_HIERARCHY.get(new_role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
+            raise HTTPException(status_code=403, detail="不能将用户角色提升到等于或高于自身级别")
+        update_data["role"] = new_role
+
+    # 验证 parent_id 有效性
+    if "parent_id" in update_data and update_data["parent_id"] is not None:
+        parent = db.query(User).filter(User.id == update_data["parent_id"]).first()
+        if not parent:
+            raise HTTPException(status_code=400, detail="指定的上级用户不存在")
+        if update_data["parent_id"] == user_id:
+            raise HTTPException(status_code=400, detail="不能将自己设为自己的上级")
 
     for field, value in update_data.items():
         setattr(db_user, field, value)
@@ -132,7 +182,7 @@ def update_user(
     db.add(log)
     db.commit()
 
-    return db_user
+    return _user_to_response(db_user)
 
 
 @router.delete("/users/{user_id}")
@@ -147,6 +197,15 @@ def delete_user(
 
     if db_user.id == current_user.id:
         raise HTTPException(status_code=400, detail="不能删除自己")
+
+    # 不能删除同级或更高级别的用户
+    if ROLE_HIERARCHY.get(db_user.role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
+        raise HTTPException(status_code=403, detail="不能删除同级或更高级别的用户")
+
+    # 将被删除用户的下属重新指向被删除用户的上级
+    children = db.query(User).filter(User.parent_id == db_user.id).all()
+    for child in children:
+        child.parent_id = db_user.parent_id
 
     username = db_user.username
     db.delete(db_user)
@@ -164,7 +223,7 @@ def delete_user(
     return {"message": "用户删除成功"}
 
 
-@router.post("/users", response_model=UserResponse)
+@router.post("/users")
 def admin_create_user(
     user: AdminUserCreate,
     current_user: User = Depends(get_current_admin),
@@ -178,12 +237,28 @@ def admin_create_user(
     if db_email:
         raise HTTPException(status_code=400, detail="邮箱已被注册")
 
+    new_role = UserRole(user.role) if user.role else UserRole.USER
+    # 不能创建等于或高于自身级别的用户
+    if ROLE_HIERARCHY.get(new_role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
+        raise HTTPException(status_code=403, detail="不能创建等于或高于自身级别的用户")
+
+    # 验证 parent_id
+    parent_id = user.parent_id
+    if parent_id:
+        parent = db.query(User).filter(User.id == parent_id).first()
+        if not parent:
+            raise HTTPException(status_code=400, detail="指定的上级用户不存在")
+        # 上级的角色必须高于新建用户的角色
+        if ROLE_HIERARCHY.get(parent.role, 0) <= ROLE_HIERARCHY.get(new_role, 0):
+            raise HTTPException(status_code=400, detail="上级用户的角色级别必须高于新建用户")
+
     new_user = User(
         username=user.username,
         email=user.email,
         hashed_password=get_password_hash(user.password),
         full_name=user.full_name,
-        role=UserRole(user.role) if user.role else UserRole.USER,
+        role=new_role,
+        parent_id=parent_id,
         is_active=True,
         projects=user.projects
     )
@@ -193,19 +268,20 @@ def admin_create_user(
         user_id=current_user.id,
         action="管理员创建用户",
         module="系统管理",
-        detail=f"管理员 {current_user.username} 创建用户: {user.username}"
+        detail=f"管理员 {current_user.username} 创建用户: {user.username}，角色: {user.role}"
     )
     db.add(log)
     db.commit()
     db.refresh(new_user)
 
-    return new_user
+    return _user_to_response(new_user)
 
 
-# ==================== 邀请码管理（仅管理员） ====================
+# ==================== 邀请码管理（管理员及以上） ====================
 
 @router.post("/invite-codes", response_model=InviteCodeResponse)
 def create_invite_code(
+    code_data: InviteCodeCreate,
     current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
@@ -213,6 +289,8 @@ def create_invite_code(
     invite = InviteCode(
         code=code,
         created_by=current_user.id,
+        projects=code_data.projects,
+        register_role=code_data.register_role or "user",
         is_used=False
     )
     db.add(invite)
@@ -221,7 +299,7 @@ def create_invite_code(
         user_id=current_user.id,
         action="生成邀请码",
         module="系统管理",
-        detail=f"生成邀请码: {code}"
+        detail=f"生成邀请码: {code}，注册角色: {code_data.register_role or 'user'}，项目: {code_data.projects or '默认'}"
     )
     db.add(log)
     db.commit()
@@ -232,6 +310,7 @@ def create_invite_code(
 
 @router.post("/invite-codes/batch", response_model=list[InviteCodeResponse])
 def batch_create_invite_codes(
+    code_data: InviteCodeCreate,
     count: int = 5,
     current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
@@ -245,6 +324,8 @@ def batch_create_invite_codes(
         invite = InviteCode(
             code=code,
             created_by=current_user.id,
+            projects=code_data.projects,
+            register_role=code_data.register_role or "user",
             is_used=False
         )
         db.add(invite)
@@ -254,7 +335,7 @@ def batch_create_invite_codes(
         user_id=current_user.id,
         action="批量生成邀请码",
         module="系统管理",
-        detail=f"批量生成 {count} 个邀请码"
+        detail=f"批量生成 {count} 个邀请码，注册角色: {code_data.register_role or 'user'}，项目: {code_data.projects or '默认'}"
     )
     db.add(log)
     db.commit()
@@ -273,15 +354,33 @@ def get_invite_codes(
     current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    query = db.query(InviteCode)
+    query = db.query(InviteCode).filter(InviteCode.created_by == current_user.id)
     if is_used is not None:
         query = query.filter(InviteCode.is_used == is_used)
 
     total = query.count()
     codes = query.order_by(InviteCode.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
 
+    # 附带已注册用户信息
+    items = []
+    for c in codes:
+        item = InviteCodeResponse.model_validate(c).model_dump()
+        if c.used_user:
+            item["used_user_info"] = {
+                "id": c.used_user.id,
+                "username": c.used_user.username,
+                "full_name": c.used_user.full_name,
+                "role": c.used_user.role.value if c.used_user.role else "user",
+                "email": c.used_user.email,
+            }
+        else:
+            item["used_user_info"] = None
+        if c.creator:
+            item["creator_name"] = c.creator.full_name or c.creator.username
+        items.append(item)
+
     return {
-        "items": [InviteCodeResponse.model_validate(c) for c in codes],
+        "items": items,
         "total": total,
         "page": page,
         "page_size": page_size,

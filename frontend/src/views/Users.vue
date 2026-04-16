@@ -65,7 +65,7 @@
               </svg>
             </div>
             <div>
-              <p class="text-xs dark:text-gray-400 text-gray-500 uppercase tracking-wider font-medium">管理员</p>
+              <p class="text-xs dark:text-gray-400 text-gray-500 uppercase tracking-wider font-medium">管理员及以上</p>
               <p class="text-3xl font-bold mt-1 bg-gradient-to-r from-primary-400 to-purple-300 bg-clip-text text-transparent">{{ adminCount }}</p>
             </div>
           </div>
@@ -91,6 +91,7 @@
               <th>邮箱</th>
               <th>姓名</th>
               <th>角色</th>
+              <th>上级</th>
               <th>项目权限</th>
               <th>状态</th>
               <th>注册时间</th>
@@ -117,6 +118,10 @@
                 >
                   {{ getRoleName(user.role) }}
                 </span>
+              </td>
+              <td class="text-sm dark:text-gray-400 text-gray-600">
+                <span v-if="user.parent_name">{{ user.parent_name }}</span>
+                <span v-else class="dark:text-gray-600 text-gray-400">-</span>
               </td>
               <td>
                 <div class="flex flex-wrap gap-1">
@@ -166,7 +171,7 @@
                     </svg>
                   </button>
                   <button
-                    v-if="user.username !== 'admin'"
+                    v-if="user.role !== 'super_admin'"
                     @click="deleteUser(user)"
                     class="p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors"
                     title="删除"
@@ -179,7 +184,7 @@
               </td>
             </tr>
             <tr v-if="users.length === 0">
-              <td colspan="9" class="text-center py-20">
+              <td colspan="10" class="text-center py-20">
                 <div class="space-y-3">
                   <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary-500/10 to-cyber-purple/10 flex items-center justify-center">
                     <svg class="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -202,6 +207,7 @@
       :visible="dialogVisible"
       :is-edit="isEdit"
       :edit-data="editingUser"
+      :all-users="users"
       @close="dialogVisible = false"
       @submitted="onDialogSubmitted"
     />
@@ -312,7 +318,7 @@ const invitePages = ref(0)
 const inviteFilter = ref('all')
 
 const activeUserCount = computed(() => users.value.filter(u => u.is_active).length)
-const adminCount = computed(() => users.value.filter(u => u.role === 'admin').length)
+const adminCount = computed(() => users.value.filter(u => ['super_admin', 'admin'].includes(u.role)).length)
 
 onMounted(() => {
   fetchUsers()
@@ -386,14 +392,15 @@ function getUserProjects(user) {
 }
 
 function getRoleName(role) {
-  const names = { admin: '管理员', manager: '经理', user: '用户' }
+  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '用户' }
   return names[role] || role
 }
 
 function getRoleClass(role) {
   const classes = {
+    super_admin: 'dark:bg-purple-500/15 dark:text-purple-400 dark:border-purple-500/25 bg-purple-50 text-purple-600 border border-purple-200',
     admin: 'dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/25 bg-red-50 text-red-600 border border-red-200',
-    manager: 'dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25 bg-amber-50 text-amber-600 border border-amber-200',
+    leader: 'dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25 bg-amber-50 text-amber-600 border border-amber-200',
     user: 'dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/25 bg-blue-50 text-blue-600 border border-blue-200'
   }
   return classes[role] || 'dark:bg-gray-500/15 dark:text-gray-400 dark:border-gray-500/25 bg-gray-100 text-gray-600 border border-gray-200'
