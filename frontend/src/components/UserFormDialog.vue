@@ -186,7 +186,7 @@ async function handleSubmit() {
       await api.put(`/auth/users/${props.editData.id}`, data)
       ElMessage.success('更新成功')
     } else {
-      await api.post('/auth/register', data)
+      await api.post('/auth/users', data)
       ElMessage.success('创建成功')
     }
     emit('submitted')

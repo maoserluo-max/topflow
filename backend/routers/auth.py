@@ -6,7 +6,7 @@ import secrets
 
 from models import get_db, User, UserRole, OperationLog, InviteCode
 from auth import verify_password, get_password_hash, create_access_token, get_current_user, get_current_admin
-from schemas import UserCreate, UserUpdate, UserResponse, Token, LoginRequest, InviteCodeResponse
+from schemas import UserCreate, UserUpdate, UserResponse, Token, LoginRequest, InviteCodeResponse, AdminUserCreate
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
@@ -162,6 +162,44 @@ def delete_user(
     db.commit()
 
     return {"message": "用户删除成功"}
+
+
+@router.post("/users", response_model=UserResponse)
+def admin_create_user(
+    user: AdminUserCreate,
+    current_user: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    db_user = db.query(User).filter(User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="用户名已存在")
+
+    db_email = db.query(User).filter(User.email == user.email).first()
+    if db_email:
+        raise HTTPException(status_code=400, detail="邮箱已被注册")
+
+    new_user = User(
+        username=user.username,
+        email=user.email,
+        hashed_password=get_password_hash(user.password),
+        full_name=user.full_name,
+        role=UserRole(user.role) if user.role else UserRole.USER,
+        is_active=True,
+        projects=user.projects
+    )
+    db.add(new_user)
+
+    log = OperationLog(
+        user_id=current_user.id,
+        action="管理员创建用户",
+        module="系统管理",
+        detail=f"管理员 {current_user.username} 创建用户: {user.username}"
+    )
+    db.add(log)
+    db.commit()
+    db.refresh(new_user)
+
+    return new_user
 
 
 # ==================== 邀请码管理（仅管理员） ====================

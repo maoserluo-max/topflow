@@ -49,6 +49,30 @@ class UserCreate(UserBase):
         return v.strip()
 
 
+class AdminUserCreate(UserBase):
+    password: str
+    role: Optional[str] = "user"
+    projects: Optional[str] = "Gamoji,Poseme,内容孵化"
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 6:
+            raise ValueError('密码至少6个字符')
+        if len(v) > 72:
+            raise ValueError('密码不能超过72个字符')
+        return v
+
+    @field_validator('role')
+    @classmethod
+    def validate_role(cls, v):
+        if v is not None:
+            valid_roles = ['admin', 'manager', 'user']
+            if v not in valid_roles:
+                raise ValueError(f'无效的角色，可选值: {", ".join(valid_roles)}')
+        return v
+
+
 class InviteCodeResponse(BaseModel):
     id: int
     code: str
