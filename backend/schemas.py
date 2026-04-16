@@ -82,7 +82,7 @@ class InviteCodeCreate(BaseModel):
     @classmethod
     def validate_register_role(cls, v):
         if v is not None:
-            valid_roles = ['leader', 'user']
+            valid_roles = ['admin', 'leader', 'user']
             if v not in valid_roles:
                 raise ValueError(f'邀请码注册角色只能为: {", ".join(valid_roles)}')
         return v
@@ -110,6 +110,33 @@ class UserUpdate(BaseModel):
     parent_id: Optional[int] = None
     is_active: Optional[bool] = None
     projects: Optional[str] = None
+    password: Optional[str] = None
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if v is not None:
+            if len(v) < 6:
+                raise ValueError('密码至少6个字符')
+            if len(v) > 72:
+                raise ValueError('密码不能超过72个字符')
+        return v
+
+
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    new_password: Optional[str] = None
+    current_password: Optional[str] = None
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_new_password(cls, v):
+        if v is not None:
+            if len(v) < 6:
+                raise ValueError('密码至少6个字符')
+            if len(v) > 72:
+                raise ValueError('密码不能超过72个字符')
+        return v
 
     @field_validator('role')
     @classmethod

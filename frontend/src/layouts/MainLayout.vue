@@ -115,6 +115,15 @@
             <div class="absolute right-0 mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 translate-y-2 group-hover:translate-y-0">
               <div class="glass-card p-2 space-y-1">
                 <button
+                  @click="showProfileDialog"
+                  class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm dark:text-gray-300 dark:hover:text-white dark:hover:bg-white/5 text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  账户管理
+                </button>
+                <button
                   @click="showCookiesDialog"
                   class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm dark:text-gray-300 dark:hover:text-white dark:hover:bg-white/5 text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 >
@@ -155,6 +164,7 @@
 
     <CookiesDialog ref="cookiesDialogRef" />
     <InviteCodesDialog ref="inviteCodesDialogRef" />
+    <ProfileDialog ref="profileDialogRef" />
   </div>
 </template>
 
@@ -165,6 +175,7 @@ import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 import CookiesDialog from '@/components/CookiesDialog.vue'
 import InviteCodesDialog from '@/components/InviteCodesDialog.vue'
+import ProfileDialog from '@/components/ProfileDialog.vue'
 
 const route = useRoute()
 const userStore = useUserStore()
@@ -172,6 +183,7 @@ const themeStore = useThemeStore()
 const sidebarCollapsed = ref(false)
 const cookiesDialogRef = ref(null)
 const inviteCodesDialogRef = ref(null)
+const profileDialogRef = ref(null)
 
 const currentTitle = computed(() => route.meta.title || '仪表盘')
 
@@ -228,6 +240,10 @@ function getRoleClass(role) {
 
 function showCookiesDialog() {
   cookiesDialogRef.value?.open()
+}
+
+function showProfileDialog() {
+  profileDialogRef.value?.open()
 }
 
 function showInviteCodesDialog() {

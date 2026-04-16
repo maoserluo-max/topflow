@@ -115,6 +115,17 @@
                 />
               </div>
 
+              <div v-if="isEdit" class="space-y-1.5">
+                <label class="text-xs dark:text-gray-500 text-gray-600 font-medium uppercase tracking-wide">重置密码</label>
+                <input
+                  v-model="form.password"
+                  type="password"
+                  placeholder="留空则不修改密码"
+                  minlength="6"
+                  class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all"
+                />
+              </div>
+
               <div class="flex justify-end gap-4 pt-6 mt-6 dark:border-t dark:border-white/5 border-t border-gray-200">
                 <button
                   type="button"
@@ -169,10 +180,14 @@ const allRoles = [
   { value: 'user', label: '普通用户' }
 ]
 
-// 当前用户可以创建的角色：只能创建低于自身级别的角色
+// 当前用户可以创建的角色：管理员可创建同级及以下，组长只能创建低于自身的角色
 const availableRoles = computed(() => {
   const currentRole = userStore.user?.role || 'user'
   const currentLevel = ROLE_HIERARCHY[currentRole] || 1
+  // 管理员可以创建同级（admin）及以下角色，组长只能创建低于自身的角色
+  if (currentRole === 'admin') {
+    return allRoles.filter(r => ROLE_HIERARCHY[r.value] <= currentLevel)
+  }
   return allRoles.filter(r => ROLE_HIERARCHY[r.value] < currentLevel)
 })
 
@@ -200,11 +215,16 @@ const canChangeProjects = computed(() => {
 
 const isAdminRole = computed(() => form.role === 'admin')
 
-// 可选的上级候选人：角色级别高于当前选择的角色
+// 可选的上级候选人：角色级别高于或等于当前选择的角色（管理员可以选管理员作为上级）
 const parentCandidates = computed(() => {
   const selectedLevel = ROLE_HIERARCHY[form.role] || 1
+  const currentRole = userStore.user?.role || 'user'
   return props.allUsers.filter(u => {
     const level = ROLE_HIERARCHY[u.role] || 1
+    // 管理员创建管理员时，同级别的管理员也可以作为上级
+    if (currentRole === 'admin' && form.role === 'admin') {
+      return level >= selectedLevel && u.id !== props.editData?.id
+    }
     return level > selectedLevel && u.id !== props.editData?.id
   })
 })
@@ -264,8 +284,9 @@ async function handleSubmit() {
       delete data.parent_id
     }
     if (props.isEdit) {
-      delete data.password
       if (!data.email) delete data.email
+      // 密码为空则不传
+      if (!data.password) delete data.password
       await api.put(`/auth/users/${props.editData.id}`, data)
       ElMessage.success('更新成功')
     } else {

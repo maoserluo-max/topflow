@@ -149,6 +149,7 @@ const allowedRegisterRoles = computed(() => {
   const role = userStore.user?.role || 'user'
   if (role === 'admin') {
     return [
+      { value: 'admin', label: '管理员' },
       { value: 'leader', label: '组长' },
       { value: 'user', label: '普通用户' }
     ]

@@ -292,7 +292,8 @@ function canDeleteUser(user) {
   const myLevel = ROLE_HIERARCHY[myRole] || 1
   const userLevel = ROLE_HIERARCHY[user.role] || 1
   if (user.id === currentUser.value?.id) return false
-  if (user.role === 'admin') return false
+  // 管理员可以删除其他管理员，组长不能删除管理员
+  if (myRole === 'admin') return userLevel <= myLevel
   return myLevel > userLevel
 }
 

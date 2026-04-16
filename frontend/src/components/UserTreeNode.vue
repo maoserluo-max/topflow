@@ -135,8 +135,8 @@ const canDelete = computed(() => {
   const myLevel = ROLE_HIERARCHY[myRole] || 1
   const userLevel = ROLE_HIERARCHY[props.user.role] || 1
   if (props.user.id === props.currentUser?.id) return false
-  if (props.user.role === 'admin') return false
-  // 组长及以上可以删除级别低于自己的用户
+  // 管理员可以删除同级及以下，组长只能删除低于自身的
+  if (myRole === 'admin') return userLevel <= myLevel
   return myLevel > userLevel
 })
 

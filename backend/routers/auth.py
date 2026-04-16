@@ -6,7 +6,7 @@ import secrets
 
 from models import get_db, User, UserRole, OperationLog, InviteCode, ROLE_HIERARCHY
 from auth import verify_password, get_password_hash, create_access_token, get_current_user, get_current_leader_or_above, get_current_admin_or_leader
-from schemas import UserCreate, UserUpdate, UserResponse, Token, LoginRequest, InviteCodeResponse, InviteCodeCreate, AdminUserCreate
+from schemas import UserCreate, UserUpdate, UserResponse, Token, LoginRequest, InviteCodeResponse, InviteCodeCreate, AdminUserCreate, ProfileUpdate
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
@@ -157,8 +157,35 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 @router.get("/me", response_model=UserResponse)
-def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
+def get_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return _user_to_response(current_user, db)
+
+
+@router.put("/me/profile")
+def update_profile(
+    profile: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """用户自助修改姓名和密码"""
+    update_fields = {}
+
+    if profile.full_name is not None:
+        update_fields["full_name"] = profile.full_name
+        current_user.full_name = profile.full_name
+
+    if profile.new_password is not None:
+        # 修改密码需要验证当前密码
+        if not profile.current_password:
+            raise HTTPException(status_code=400, detail="修改密码需要提供当前密码")
+        if not verify_password(profile.current_password, current_user.hashed_password):
+            raise HTTPException(status_code=400, detail="当前密码错误")
+        current_user.hashed_password = get_password_hash(profile.new_password)
+
+    db.commit()
+    db.refresh(current_user)
+
+    return _user_to_response(current_user, db)
 
 
 @router.get("/users")
@@ -187,9 +214,9 @@ def update_user(
     if not db_user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
-    # 不能修改比自己权限高的用户
-    if ROLE_HIERARCHY.get(db_user.role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0) and db_user.id != current_user.id:
-        raise HTTPException(status_code=403, detail="不能修改同级或更高级别的用户")
+    # 不能修改比自己权限高的用户（管理员可以修改同级管理员）
+    if ROLE_HIERARCHY.get(db_user.role, 0) > ROLE_HIERARCHY.get(current_user.role, 0):
+        raise HTTPException(status_code=403, detail="不能修改比自己权限高的用户")
 
     # 组长只能修改自己的下属
     if current_user.role == UserRole.LEADER:
@@ -200,9 +227,9 @@ def update_user(
     update_data = user_update.dict(exclude_unset=True)
     if "role" in update_data and update_data["role"]:
         new_role = UserRole(update_data["role"])
-        # 不能将用户角色提升到等于或高于自身
-        if ROLE_HIERARCHY.get(new_role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
-            raise HTTPException(status_code=403, detail="不能将用户角色提升到等于或高于自身级别")
+        # 不能将用户角色提升到高于自身（管理员可以提升到同级管理员）
+        if ROLE_HIERARCHY.get(new_role, 0) > ROLE_HIERARCHY.get(current_user.role, 0):
+            raise HTTPException(status_code=403, detail="不能将用户角色提升到高于自身级别")
         update_data["role"] = new_role
 
     # 验证 parent_id 有效性
@@ -214,7 +241,10 @@ def update_user(
             raise HTTPException(status_code=400, detail="不能将自己设为自己的上级")
 
     for field, value in update_data.items():
-        setattr(db_user, field, value)
+        if field == "password" and value:
+            db_user.hashed_password = get_password_hash(value)
+        elif field != "password":
+            setattr(db_user, field, value)
 
     db.commit()
     db.refresh(db_user)
@@ -244,9 +274,9 @@ def delete_user(
     if db_user.id == current_user.id:
         raise HTTPException(status_code=400, detail="不能删除自己")
 
-    # 不能删除同级或更高级别的用户
-    if ROLE_HIERARCHY.get(db_user.role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
-        raise HTTPException(status_code=403, detail="不能删除同级或更高级别的用户")
+    # 不能删除高于自身级别的用户（管理员可以删除同级管理员）
+    if ROLE_HIERARCHY.get(db_user.role, 0) > ROLE_HIERARCHY.get(current_user.role, 0):
+        raise HTTPException(status_code=403, detail="不能删除高于自身级别的用户")
 
     # 组长只能删除自己的下属
     if current_user.role == UserRole.LEADER:
@@ -290,9 +320,9 @@ def admin_create_user(
         raise HTTPException(status_code=400, detail="邮箱已被注册")
 
     new_role = UserRole(user.role) if user.role else UserRole.USER
-    # 不能创建等于或高于自身级别的用户
-    if ROLE_HIERARCHY.get(new_role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
-        raise HTTPException(status_code=403, detail="不能创建等于或高于自身级别的用户")
+    # 不能创建高于自身级别的用户（管理员可以创建同级管理员）
+    if ROLE_HIERARCHY.get(new_role, 0) > ROLE_HIERARCHY.get(current_user.role, 0):
+        raise HTTPException(status_code=403, detail="不能创建高于自身级别的用户")
 
     # 验证 parent_id
     parent_id = user.parent_id
@@ -300,9 +330,9 @@ def admin_create_user(
         parent = db.query(User).filter(User.id == parent_id).first()
         if not parent:
             raise HTTPException(status_code=400, detail="指定的上级用户不存在")
-        # 上级的角色必须高于新建用户的角色
-        if ROLE_HIERARCHY.get(parent.role, 0) <= ROLE_HIERARCHY.get(new_role, 0):
-            raise HTTPException(status_code=400, detail="上级用户的角色级别必须高于新建用户")
+        # 上级的角色必须高于或等于新建用户的角色（管理员可以选管理员作上级）
+        if ROLE_HIERARCHY.get(parent.role, 0) < ROLE_HIERARCHY.get(new_role, 0):
+            raise HTTPException(status_code=400, detail="上级用户的角色级别必须不低于新建用户")
     else:
         # 默认上级为当前用户
         parent_id = current_user.id
@@ -340,7 +370,7 @@ def admin_create_user(
 def _get_allowed_register_roles(current_user: User) -> list[str]:
     """获取当前用户允许生成的邀请码注册角色"""
     if current_user.role == UserRole.ADMIN:
-        return ['leader', 'user']
+        return ['admin', 'leader', 'user']
     elif current_user.role == UserRole.LEADER:
         return ['user']
     return []
