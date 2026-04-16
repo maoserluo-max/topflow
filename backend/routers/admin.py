@@ -8,7 +8,7 @@ import csv
 import io
 
 from models import get_db, User, OperationLog, UserRole, Video
-from auth import get_current_super_admin
+from auth import get_current_admin
 from schemas import OperationLogResponse
 
 router = APIRouter(prefix="/api/admin", tags=["系统管理"])
@@ -23,7 +23,7 @@ def get_operation_logs(
     user_id: Optional[int] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    current_user: User = Depends(get_current_super_admin),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     query = db.query(OperationLog)
@@ -53,7 +53,7 @@ def get_operation_logs(
 
 @router.get("/stats")
 def get_system_stats(
-    current_user: User = Depends(get_current_super_admin),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     total_users = db.query(User).count()
@@ -77,7 +77,7 @@ def get_system_stats(
 def export_logs(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    current_user: User = Depends(get_current_super_admin),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     query = db.query(OperationLog)

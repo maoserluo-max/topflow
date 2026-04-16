@@ -203,7 +203,7 @@ const menuItems = computed(() => {
     )
   }
 
-  if (userStore.isSuperAdmin) {
+  if (userStore.isAdmin) {
     baseItems.push(
       { path: '/logs', label: '操作日志', icon: LogsIcon }
     )
@@ -213,14 +213,13 @@ const menuItems = computed(() => {
 })
 
 function getRoleName(role) {
-  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '普通用户' }
+  const names = { admin: '管理员', leader: '组长', user: '普通用户' }
   return names[role] || role
 }
 
 function getRoleClass(role) {
   const classes = {
-    super_admin: 'bg-purple-500/10 text-purple-400',
-    admin: 'bg-red-500/10 text-red-400',
+    admin: 'bg-purple-500/10 text-purple-400',
     leader: 'bg-amber-500/10 text-amber-400',
     user: 'bg-blue-500/10 text-blue-400'
   }

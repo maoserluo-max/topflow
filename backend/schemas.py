@@ -68,7 +68,7 @@ class AdminUserCreate(UserBase):
     @classmethod
     def validate_role(cls, v):
         if v is not None:
-            valid_roles = ['super_admin', 'admin', 'leader', 'user']
+            valid_roles = ['admin', 'leader', 'user']
             if v not in valid_roles:
                 raise ValueError(f'无效的角色，可选值: {", ".join(valid_roles)}')
         return v
@@ -82,7 +82,7 @@ class InviteCodeCreate(BaseModel):
     @classmethod
     def validate_register_role(cls, v):
         if v is not None:
-            valid_roles = ['admin', 'leader', 'user']
+            valid_roles = ['leader', 'user']
             if v not in valid_roles:
                 raise ValueError(f'邀请码注册角色只能为: {", ".join(valid_roles)}')
         return v
@@ -115,7 +115,7 @@ class UserUpdate(BaseModel):
     @classmethod
     def validate_role(cls, v):
         if v is not None:
-            valid_roles = ['super_admin', 'admin', 'leader', 'user']
+            valid_roles = ['admin', 'leader', 'user']
             if v not in valid_roles:
                 raise ValueError(f'无效的角色，可选值: {", ".join(valid_roles)}')
         return v
@@ -175,6 +175,7 @@ class VideoBase(BaseModel):
     contact_email: Optional[str] = None
     contact_whatsapp: Optional[str] = None
     status: Optional[str] = "pending_review"
+    stats_updated_at: Optional[datetime] = None
 
     @field_validator('project')
     @classmethod
@@ -242,6 +243,7 @@ class VideoUpdate(BaseModel):
     contact_email: Optional[str] = None
     contact_whatsapp: Optional[str] = None
     status: Optional[str] = None
+    stats_updated_at: Optional[datetime] = None
 
     @field_validator('platform')
     @classmethod

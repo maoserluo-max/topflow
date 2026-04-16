@@ -23,7 +23,7 @@
               <input type="checkbox" :value="p" v-model="selectedProjects" :disabled="isAdminRole" class="rounded dark:bg-white/5 dark:border-white/20 border-gray-300 text-primary-600 focus:ring-primary-500" />
               <span class="text-sm dark:text-gray-300 text-gray-700">{{ p }}</span>
             </label>
-            <p v-if="isAdminRole" class="text-xs dark:text-gray-600 text-gray-400 w-full mt-1">管理员及以上默认拥有所有项目</p>
+            <p v-if="isAdminRole" class="text-xs dark:text-gray-600 text-gray-400 w-full mt-1">管理员默认拥有所有项目</p>
           </div>
         </div>
         <div class="space-y-1.5">
@@ -142,18 +142,12 @@ const currentPage = ref(1)
 const pageSize = 20
 const filterUsed = ref(null)
 
-const ROLE_HIERARCHY = { super_admin: 4, admin: 3, leader: 2, user: 1 }
+const ROLE_HIERARCHY = { admin: 3, leader: 2, user: 1 }
 
-// 根据当前用户角色确定可选的注册角色（组长及以上可生成邀请码）
+// 根据当前用户角色确定可选的注册角色（管理员和组长可生成邀请码）
 const allowedRegisterRoles = computed(() => {
   const role = userStore.user?.role || 'user'
-  if (role === 'super_admin') {
-    return [
-      { value: 'admin', label: '管理员' },
-      { value: 'leader', label: '组长' },
-      { value: 'user', label: '普通用户' }
-    ]
-  } else if (role === 'admin') {
+  if (role === 'admin') {
     return [
       { value: 'leader', label: '组长' },
       { value: 'user', label: '普通用户' }
@@ -169,13 +163,13 @@ const allowedRegisterRoles = computed(() => {
 // 当前用户可选择的项目（管理员默认所有，组长只能选自己的项目）
 const availableProjects = computed(() => {
   const role = userStore.user?.role || 'user'
-  if (['super_admin', 'admin'].includes(role)) {
+  if (role === 'admin') {
     return ['Gamoji', 'Poseme', '内容孵化']
   }
   return userStore.userProjects
 })
 
-const isAdminRole = computed(() => ['super_admin', 'admin'].includes(newCode.register_role))
+const isAdminRole = computed(() => newCode.register_role === 'admin')
 
 const selectedProjects = ref(['Gamoji', 'Poseme', '内容孵化'])
 
@@ -186,7 +180,7 @@ const newCode = reactive({
 
 // 管理员及以上角色自动选中所有项目
 watch(() => newCode.register_role, (val) => {
-  if (['super_admin', 'admin'].includes(val)) {
+  if (val === 'admin') {
     selectedProjects.value = ['Gamoji', 'Poseme', '内容孵化']
   }
 })
@@ -263,7 +257,7 @@ function copyCode(code) {
 }
 
 function getRoleName(role) {
-  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '普通用户' }
+  const names = { admin: '管理员', leader: '组长', user: '普通用户' }
   return names[role] || role || '普通用户'
 }
 

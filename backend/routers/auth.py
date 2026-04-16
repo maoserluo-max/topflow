@@ -5,7 +5,7 @@ from datetime import datetime
 import secrets
 
 from models import get_db, User, UserRole, OperationLog, InviteCode, ROLE_HIERARCHY
-from auth import verify_password, get_password_hash, create_access_token, get_current_user, get_current_super_admin, get_current_leader_or_above, get_current_admin_or_leader
+from auth import verify_password, get_password_hash, create_access_token, get_current_user, get_current_leader_or_above, get_current_admin_or_leader
 from schemas import UserCreate, UserUpdate, UserResponse, Token, LoginRequest, InviteCodeResponse, InviteCodeCreate, AdminUserCreate
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
@@ -166,10 +166,11 @@ def get_users(
     current_user: User = Depends(get_current_admin_or_leader),
     db: Session = Depends(get_db)
 ):
-    if current_user.role == UserRole.SUPER_ADMIN:
+    if current_user.role == UserRole.ADMIN:
+        # 管理员可以看到所有用户
         users = db.query(User).all()
     else:
-        # 管理员和组长只能看到自己下属（包含自身）
+        # 组长只能看到自己下属（包含自身）
         subordinate_ids = _get_subordinate_ids(current_user, db)
         users = db.query(User).filter(User.id.in_(subordinate_ids)).all()
     return [_user_to_response(u, db) for u in users]
@@ -190,12 +191,8 @@ def update_user(
     if ROLE_HIERARCHY.get(db_user.role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0) and db_user.id != current_user.id:
         raise HTTPException(status_code=403, detail="不能修改同级或更高级别的用户")
 
-    # 非super_admin不能修改super_admin
-    if current_user.role != UserRole.SUPER_ADMIN and db_user.role == UserRole.SUPER_ADMIN:
-        raise HTTPException(status_code=403, detail="权限不足")
-
-    # 管理员和组长只能修改自己的下属
-    if current_user.role in [UserRole.ADMIN, UserRole.LEADER]:
+    # 组长只能修改自己的下属
+    if current_user.role == UserRole.LEADER:
         subordinate_ids = _get_subordinate_ids(current_user, db)
         if db_user.id not in subordinate_ids:
             raise HTTPException(status_code=403, detail="只能修改自己的下属用户")
@@ -251,8 +248,8 @@ def delete_user(
     if ROLE_HIERARCHY.get(db_user.role, 0) >= ROLE_HIERARCHY.get(current_user.role, 0):
         raise HTTPException(status_code=403, detail="不能删除同级或更高级别的用户")
 
-    # 管理员和组长只能删除自己的下属
-    if current_user.role in [UserRole.ADMIN, UserRole.LEADER]:
+    # 组长只能删除自己的下属
+    if current_user.role == UserRole.LEADER:
         subordinate_ids = _get_subordinate_ids(current_user, db)
         if db_user.id not in subordinate_ids:
             raise HTTPException(status_code=403, detail="只能删除自己的下属用户")
@@ -342,9 +339,7 @@ def admin_create_user(
 
 def _get_allowed_register_roles(current_user: User) -> list[str]:
     """获取当前用户允许生成的邀请码注册角色"""
-    if current_user.role == UserRole.SUPER_ADMIN:
-        return ['admin', 'leader', 'user']
-    elif current_user.role == UserRole.ADMIN:
+    if current_user.role == UserRole.ADMIN:
         return ['leader', 'user']
     elif current_user.role == UserRole.LEADER:
         return ['user']
@@ -362,9 +357,9 @@ def create_invite_code(
     if code_data.register_role and code_data.register_role not in allowed_roles:
         raise HTTPException(status_code=403, detail=f"您只能生成注册角色为: {', '.join(allowed_roles)} 的邀请码")
 
-    # 项目权限：未指定时，管理员及以上默认所有项目，组长继承自身项目
+    # 项目权限：未指定时，管理员默认所有项目，组长继承自身项目
     if not code_data.projects:
-        if current_user.role in [UserRole.SUPER_ADMIN, UserRole.ADMIN]:
+        if current_user.role == UserRole.ADMIN:
             code_data.projects = "Gamoji,Poseme,内容孵化"
         elif current_user.projects:
             code_data.projects = current_user.projects
@@ -410,7 +405,7 @@ def batch_create_invite_codes(
         raise HTTPException(status_code=403, detail=f"您只能生成注册角色为: {', '.join(allowed_roles)} 的邀请码")
 
     if not code_data.projects:
-        if current_user.role in [UserRole.SUPER_ADMIN, UserRole.ADMIN]:
+        if current_user.role == UserRole.ADMIN:
             code_data.projects = "Gamoji,Poseme,内容孵化"
         elif current_user.projects:
             code_data.projects = current_user.projects

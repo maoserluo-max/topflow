@@ -57,16 +57,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 
 
 async def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
-    """系统管理员或管理员权限"""
-    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.ADMIN]:
+    """管理员权限"""
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="权限不足，需要管理员权限")
-    return current_user
-
-
-async def get_current_super_admin(current_user: User = Depends(get_current_user)) -> User:
-    """仅系统管理员权限"""
-    if current_user.role != UserRole.SUPER_ADMIN:
-        raise HTTPException(status_code=403, detail="权限不足，需要系统管理员权限")
     return current_user
 
 

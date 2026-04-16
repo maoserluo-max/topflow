@@ -122,7 +122,7 @@ defineEmits(['edit', 'toggleStatus', 'delete'])
 
 const expanded = ref(true)
 
-const ROLE_HIERARCHY = { super_admin: 4, admin: 3, leader: 2, user: 1 }
+const ROLE_HIERARCHY = { admin: 3, leader: 2, user: 1 }
 
 const children = computed(() => {
   return props.allUsers.filter(u => u.parent_id === props.user.id)
@@ -135,7 +135,7 @@ const canDelete = computed(() => {
   const myLevel = ROLE_HIERARCHY[myRole] || 1
   const userLevel = ROLE_HIERARCHY[props.user.role] || 1
   if (props.user.id === props.currentUser?.id) return false
-  if (props.user.role === 'super_admin') return false
+  if (props.user.role === 'admin') return false
   // 组长及以上可以删除级别低于自己的用户
   return myLevel > userLevel
 })
@@ -146,14 +146,13 @@ function getUserProjects(user) {
 }
 
 function getRoleName(role) {
-  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '普通用户' }
+  const names = { admin: '管理员', leader: '组长', user: '普通用户' }
   return names[role] || role
 }
 
 function getRoleClass(role) {
   const classes = {
-    super_admin: 'dark:bg-purple-500/15 dark:text-purple-400 bg-purple-50 text-purple-600',
-    admin: 'dark:bg-red-500/15 dark:text-red-400 bg-red-50 text-red-600',
+    admin: 'dark:bg-purple-500/15 dark:text-purple-400 bg-purple-50 text-purple-600',
     leader: 'dark:bg-amber-500/15 dark:text-amber-400 bg-amber-50 text-amber-600',
     user: 'dark:bg-blue-500/15 dark:text-blue-400 bg-blue-50 text-blue-600'
   }
@@ -162,8 +161,7 @@ function getRoleClass(role) {
 
 function getAvatarClass(role) {
   const classes = {
-    super_admin: 'dark:from-purple-500/30 dark:to-pink-500/30 dark:text-purple-200 from-purple-100 to-pink-100 text-purple-600',
-    admin: 'dark:from-red-500/30 dark:to-orange-500/30 dark:text-red-200 from-red-100 to-orange-100 text-red-600',
+    admin: 'dark:from-purple-500/30 dark:to-pink-500/30 dark:text-purple-200 from-purple-100 to-pink-100 text-purple-600',
     leader: 'dark:from-amber-500/30 dark:to-yellow-500/30 dark:text-amber-200 from-amber-100 to-yellow-100 text-amber-600',
     user: 'dark:from-blue-500/30 dark:to-cyan-500/30 dark:text-blue-200 from-blue-100 to-cyan-100 text-blue-600'
   }

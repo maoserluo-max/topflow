@@ -240,13 +240,13 @@ const isEdit = ref(false)
 const editingUser = ref(null)
 const viewMode = ref('tree')
 
-const ROLE_HIERARCHY = { super_admin: 4, admin: 3, leader: 2, user: 1 }
+const ROLE_HIERARCHY = { admin: 3, leader: 2, user: 1 }
 
 const currentUser = computed(() => userStore.user)
 const canCreateUser = computed(() => userStore.canManageUsers)
 
 const activeUserCount = computed(() => users.value.filter(u => u.is_active).length)
-const adminCount = computed(() => users.value.filter(u => ['super_admin', 'admin'].includes(u.role)).length)
+const adminCount = computed(() => users.value.filter(u => u.role === 'admin').length)
 const leaderCount = computed(() => users.value.filter(u => u.role === 'leader').length)
 const userCount = computed(() => users.value.filter(u => u.role === 'user').length)
 
@@ -292,7 +292,7 @@ function canDeleteUser(user) {
   const myLevel = ROLE_HIERARCHY[myRole] || 1
   const userLevel = ROLE_HIERARCHY[user.role] || 1
   if (user.id === currentUser.value?.id) return false
-  if (user.role === 'super_admin') return false
+  if (user.role === 'admin') return false
   return myLevel > userLevel
 }
 
@@ -335,14 +335,13 @@ function getUserProjects(user) {
 }
 
 function getRoleName(role) {
-  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '普通用户' }
+  const names = { admin: '管理员', leader: '组长', user: '普通用户' }
   return names[role] || role
 }
 
 function getRoleClass(role) {
   const classes = {
-    super_admin: 'dark:bg-purple-500/15 dark:text-purple-400 dark:border-purple-500/25 bg-purple-50 text-purple-600 border border-purple-200',
-    admin: 'dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/25 bg-red-50 text-red-600 border border-red-200',
+    admin: 'dark:bg-purple-500/15 dark:text-purple-400 dark:border-purple-500/25 bg-purple-50 text-purple-600 border border-purple-200',
     leader: 'dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25 bg-amber-50 text-amber-600 border border-amber-200',
     user: 'dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/25 bg-blue-50 text-blue-600 border border-blue-200'
   }

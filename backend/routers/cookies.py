@@ -170,7 +170,7 @@ def get_effective_cookies(
         PlatformCookies.user_id != current_user.id,
         PlatformCookies.platform == platform
     ).join(User, PlatformCookies.user_id == User.id).filter(
-        User.role.in_([UserRole.SUPER_ADMIN, UserRole.ADMIN])
+        User.role == UserRole.ADMIN
     ).first()
 
     if admin_cookie and admin_cookie.content and admin_cookie.content.strip():
@@ -202,7 +202,7 @@ def get_effective_cookies_content(user_id: int, platform: str, db: Session) -> s
         PlatformCookies.user_id != user_id,
         PlatformCookies.platform == platform
     ).join(User, PlatformCookies.user_id == User.id).filter(
-        User.role.in_([UserRole.SUPER_ADMIN, UserRole.ADMIN])
+        User.role == UserRole.ADMIN
     ).first()
 
     if admin_cookie and admin_cookie.content and admin_cookie.content.strip():

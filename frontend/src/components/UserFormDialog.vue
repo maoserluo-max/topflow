@@ -100,7 +100,7 @@
                     <span class="text-sm font-medium">{{ p }}</span>
                   </label>
                 </div>
-                <p v-if="isAdminRole" class="text-xs dark:text-gray-600 text-gray-400 mt-1">管理员及以上默认拥有所有项目权限</p>
+                <p v-if="isAdminRole" class="text-xs dark:text-gray-600 text-gray-400 mt-1">管理员默认拥有所有项目权限</p>
               </div>
 
               <div v-if="!isEdit" class="space-y-1.5">
@@ -161,10 +161,9 @@ const emit = defineEmits(['close', 'submitted'])
 const userStore = useUserStore()
 const submitting = ref(false)
 
-const ROLE_HIERARCHY = { super_admin: 4, admin: 3, leader: 2, user: 1 }
+const ROLE_HIERARCHY = { admin: 3, leader: 2, user: 1 }
 
 const allRoles = [
-  { value: 'super_admin', label: '系统管理员' },
   { value: 'admin', label: '管理员' },
   { value: 'leader', label: '组长' },
   { value: 'user', label: '普通用户' }
@@ -180,7 +179,7 @@ const availableRoles = computed(() => {
 // 当前用户可以选择的项目（管理员默认所有，组长只能分配自己拥有的项目）
 const availableProjects = computed(() => {
   const currentRole = userStore.user?.role || 'user'
-  if (['super_admin', 'admin'].includes(currentRole)) {
+  if (['admin'].includes(currentRole)) {
     return ['Gamoji', 'Poseme', '内容孵化']
   }
   // 组长只能分配自己拥有的项目
@@ -190,16 +189,16 @@ const availableProjects = computed(() => {
 // 是否可以修改角色（组长及以上可修改）
 const canChangeRole = computed(() => {
   const currentRole = userStore.user?.role || 'user'
-  return ['super_admin', 'admin', 'leader'].includes(currentRole)
+  return ['admin', 'leader'].includes(currentRole)
 })
 
-// 是否可以修改项目权限（组长及以上可修改）
+// 是否可以修改项目权限（管理员和组长可修改）
 const canChangeProjects = computed(() => {
   const currentRole = userStore.user?.role || 'user'
-  return ['super_admin', 'admin', 'leader'].includes(currentRole)
+  return ['admin', 'leader'].includes(currentRole)
 })
 
-const isAdminRole = computed(() => ['super_admin', 'admin'].includes(form.role))
+const isAdminRole = computed(() => form.role === 'admin')
 
 // 可选的上级候选人：角色级别高于当前选择的角色
 const parentCandidates = computed(() => {
@@ -211,7 +210,7 @@ const parentCandidates = computed(() => {
 })
 
 function getRoleName(role) {
-  const names = { super_admin: '系统管理员', admin: '管理员', leader: '组长', user: '普通用户' }
+  const names = { admin: '管理员', leader: '组长', user: '普通用户' }
   return names[role] || role
 }
 
@@ -250,7 +249,7 @@ watch(() => props.visible, (val) => {
 
 // 当角色为管理员及以上时，自动选中所有项目
 watch(() => form.role, (val) => {
-  if (['super_admin', 'admin'].includes(val)) {
+  if (val === 'admin') {
     form.selectedProjects = ['Gamoji', 'Poseme', '内容孵化']
   }
 })

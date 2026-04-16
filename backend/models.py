@@ -13,7 +13,6 @@ Base = declarative_base()
 
 
 class UserRole(str, enum.Enum):
-    SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
     LEADER = "leader"
     USER = "user"
@@ -21,7 +20,6 @@ class UserRole(str, enum.Enum):
 
 # 角色层级：数值越大权限越高
 ROLE_HIERARCHY = {
-    UserRole.SUPER_ADMIN: 4,
     UserRole.ADMIN: 3,
     UserRole.LEADER: 2,
     UserRole.USER: 1,
@@ -72,6 +70,7 @@ class Video(Base):
     contact_whatsapp = Column(String(30))
     creator_id = Column(Integer, ForeignKey("users.id"))
     status = Column(String(20), default="pending_review")
+    stats_updated_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
@@ -210,6 +209,10 @@ def init_db():
             conn.execute(text("ALTER TABLE videos ADD COLUMN video_types VARCHAR(200)"))
             conn.commit()
             print("✅ 已添加 video_types 列")
+        if 'stats_updated_at' not in existing_columns:
+            conn.execute(text("ALTER TABLE videos ADD COLUMN stats_updated_at DATETIME"))
+            conn.commit()
+            print("✅ 已添加 stats_updated_at 列")
 
         result = conn.execute(text("PRAGMA table_info(users)"))
         existing_columns = {row[1] for row in result}
@@ -222,14 +225,13 @@ def init_db():
             conn.commit()
             print("✅ 已添加 parent_id 列")
 
-        # 迁移旧角色：admin -> super_admin，manager -> leader
-        result = conn.execute(text("SELECT COUNT(*) FROM users WHERE role = 'admin'"))
-        admin_count = result.fetchone()[0]
-        if admin_count > 0:
-            conn.execute(text("UPDATE users SET role = 'super_admin' WHERE role = 'admin' AND username = 'admin'"))
-            conn.execute(text("UPDATE users SET role = 'admin' WHERE role = 'admin' AND username != 'admin'"))
+        # 迁移旧角色：super_admin -> admin，manager -> leader
+        result = conn.execute(text("SELECT COUNT(*) FROM users WHERE role = 'super_admin'"))
+        super_admin_count = result.fetchone()[0]
+        if super_admin_count > 0:
+            conn.execute(text("UPDATE users SET role = 'admin' WHERE role = 'super_admin'"))
             conn.commit()
-            print("✅ 已迁移 admin 角色到 super_admin/admin")
+            print("✅ 已迁移 super_admin 角色到 admin")
         result = conn.execute(text("SELECT COUNT(*) FROM users WHERE role = 'manager'"))
         manager_count = result.fetchone()[0]
         if manager_count > 0:

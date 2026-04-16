@@ -344,7 +344,7 @@ const fetching = ref(false)
 
 const currentUser = computed(() => userStore.user?.username || '')
 const userRole = computed(() => userStore.user?.role || '')
-const canSelectAllUsers = computed(() => ['super_admin', 'admin', 'leader'].includes(userRole.value))
+const canSelectAllUsers = computed(() => ['admin', 'leader'].includes(userRole.value))
 const availableProjects = computed(() => userStore.userProjects)
 
 const regionOptions = [
