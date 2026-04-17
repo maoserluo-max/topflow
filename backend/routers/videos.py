@@ -104,6 +104,8 @@ def get_videos(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     project: Optional[str] = None,
+    video_code: Optional[str] = None,
+    content_direction: Optional[str] = None,
     platform: Optional[str] = None,
     region: Optional[str] = None,
     influencer_name: Optional[str] = None,
@@ -138,6 +140,10 @@ def get_videos(
 
     if platform:
         query = query.filter(Video.platform.ilike(f"%{platform}%"))
+    if video_code:
+        query = query.filter(Video.video_code.ilike(f"%{video_code}%"))
+    if content_direction:
+        query = query.filter(Video.content_direction == content_direction)
     if region:
         query = query.filter(Video.region.ilike(f"%{region}%"))
     if influencer_name:
@@ -180,6 +186,8 @@ def get_videos(
 @router.get("/export")
 def export_videos(
     project: Optional[str] = None,
+    video_code: Optional[str] = None,
+    content_direction: Optional[str] = None,
     platform: Optional[str] = None,
     region: Optional[str] = None,
     influencer_name: Optional[str] = None,
@@ -205,6 +213,10 @@ def export_videos(
 
     if platform:
         query = query.filter(Video.platform.ilike(f"%{platform}%"))
+    if video_code:
+        query = query.filter(Video.video_code.ilike(f"%{video_code}%"))
+    if content_direction:
+        query = query.filter(Video.content_direction == content_direction)
     if region:
         query = query.filter(Video.region.ilike(f"%{region}%"))
     if influencer_name:

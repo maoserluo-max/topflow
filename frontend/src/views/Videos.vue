@@ -46,6 +46,27 @@
 
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-3">
         <div class="space-y-1">
+          <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">视频编号</label>
+          <input
+            v-model="filters.video_code"
+            type="text"
+            placeholder="搜索编号..."
+            class="filter-input"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">内容方向</label>
+          <select
+            v-model="filters.content_direction"
+            class="filter-select"
+          >
+            <option value="" class="dark:bg-gray-900 bg-white">全部方向</option>
+            <option v-for="d in directionOptions" :key="d" :value="d" class="dark:bg-gray-900 bg-white">{{ d }}</option>
+          </select>
+        </div>
+
+        <div class="space-y-1">
           <label class="text-xs dark:text-gray-500 text-gray-600 font-medium">平台</label>
           <select
             v-model="filters.platform"
@@ -195,7 +216,7 @@
                 </span>
               </td>
               <td class="whitespace-nowrap">{{ video.title || '-' }}</td>
-              <td class="text-right font-mono text-cyber-green font-semibold whitespace-nowrap">${{ video.price_usd || '0' }}</td>
+              <td class="text-right font-mono text-cyber-green font-semibold whitespace-nowrap">${{ Number(video.price_usd || 0).toFixed(2) }}</td>
               <td class="text-sm text-gray-500 whitespace-nowrap">{{ formatDate(video.publish_date) }}</td>
               <td class="font-medium dark:text-white text-gray-900 whitespace-nowrap">{{ video.influencer_name }}</td>
               <td class="text-sm dark:text-gray-300 text-gray-700 whitespace-nowrap">{{ video.content_direction || '-' }}</td>
@@ -317,7 +338,7 @@
                     <div class="detail-field"><span class="detail-label">项目</span><span class="detail-value"><span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold dark:bg-primary-500/15 dark:text-primary-300 dark:border dark:border-primary-500/25 bg-primary-50 text-primary-600 border border-primary-200">{{ detailData?.project || '-' }}</span></span></div>
                     <div class="detail-field"><span class="detail-label">视频编号</span><span class="detail-value font-mono dark:text-cyber-blue text-primary-600">{{ detailData?.video_code || '-' }}</span></div>
                     <div class="detail-field"><span class="detail-label">内容方向</span><span class="detail-value">{{ detailData?.content_direction || '-' }}</span></div>
-                    <div class="detail-field"><span class="detail-label">价格</span><span class="detail-value text-cyber-green font-semibold">${{ detailData?.price_usd || '0' }}</span></div>
+                    <div class="detail-field"><span class="detail-label">价格</span><span class="detail-value text-cyber-green font-semibold">${{ Number(detailData?.price_usd || 0).toFixed(2) }}</span></div>
                     <div class="detail-field"><span class="detail-label">负责人</span><span class="detail-value">{{ detailData?.contact_person || '-' }}</span></div>
                     <div class="detail-field"><span class="detail-label">状态</span><span class="detail-value"><span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium" :class="getStatusClass(detailData?.status)">{{ getStatusName(detailData?.status) }}</span></span></div>
                   </div>
@@ -432,6 +453,8 @@ const columns = reactive([
 ])
 
 const filters = reactive({
+  video_code: '',
+  content_direction: '',
   platform: '',
   region: '',
   influencer_name: '',
@@ -466,8 +489,8 @@ const regionOptions = [
 ]
 
 const directionOptions = [
-  'Free Fire',
-  'Mobile Legends'
+  'FF',
+  'MLBB'
 ]
 
 const statusOptions = [
@@ -488,11 +511,11 @@ const dateShortcuts = [
 function fmt(d) { const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}` }
 
 function calcCPM(video) {
-  if (!video) return '0.00'
+  if (!video) return '0.000'
   const price = Number(video.price_usd) || 0
   const plays = Number(video.play_count) || 0
-  if (plays === 0) return '0.00'
-  return ((price / plays) * 1000).toFixed(2)
+  if (plays === 0) return '0.000'
+  return ((price / plays) * 1000).toFixed(3)
 }
 
 function toggleSort(field) {
@@ -583,7 +606,7 @@ function applyDateShortcut(shortcut) {
 }
 
 function resetFilters() {
-  Object.assign(filters, { platform: '', region: '', influencer_name: '', contact_person: '', status: '' })
+  Object.assign(filters, { video_code: '', content_direction: '', platform: '', region: '', influencer_name: '', contact_person: '', status: '' })
   dateRange.value = []
   activeShortcut.value = ''
   currentPage.value = 1
@@ -641,6 +664,8 @@ async function exportCSV() {
   try {
     const params = {}
     if (currentProject.value) params.project = currentProject.value
+    if (filters.video_code) params.video_code = filters.video_code
+    if (filters.content_direction) params.content_direction = filters.content_direction
     if (filters.platform) params.platform = filters.platform
     if (filters.region) params.region = filters.region
     if (filters.influencer_name) params.influencer_name = filters.influencer_name

@@ -143,7 +143,7 @@
                 </td>
                 <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ node.video_count }}</td>
                 <td class="text-right py-3 px-2 font-mono text-cyber-green">${{ node.total_amount?.toFixed(2) || '0.00' }}</td>
-                <td class="text-right py-3 px-2 font-mono dark:text-pink-400 text-pink-600">{{ node.cpm?.toFixed(2) || '0.00' }}</td>
+                <td class="text-right py-3 px-2 font-mono dark:text-pink-400 text-pink-600">{{ node.cpm?.toFixed(3) || '0.000' }}</td>
                 <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(node.total_plays) }}</td>
                 <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(node.total_likes) }}</td>
                 <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(node.total_comments) }}</td>
@@ -161,7 +161,7 @@
                     </td>
                     <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ child.video_count }}</td>
                     <td class="text-right py-3 px-2 font-mono text-cyber-green">${{ child.total_amount?.toFixed(2) || '0.00' }}</td>
-                    <td class="text-right py-3 px-2 font-mono dark:text-pink-400 text-pink-600">{{ child.cpm?.toFixed(2) || '0.00' }}</td>
+                    <td class="text-right py-3 px-2 font-mono dark:text-pink-400 text-pink-600">{{ child.cpm?.toFixed(3) || '0.000' }}</td>
                     <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(child.total_plays) }}</td>
                     <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(child.total_likes) }}</td>
                     <td class="text-right py-3 px-2 font-mono dark:text-gray-300 text-gray-700">{{ formatNumber(child.total_comments) }}</td>
@@ -220,7 +220,7 @@
               <td class="max-w-xs truncate dark:text-gray-400 text-gray-600">{{ video.title || '-' }}</td>
               <td class="text-right font-mono text-cyber-blue">{{ formatNumber(video.play_count) }}</td>
               <td class="text-right font-mono text-pink-400">{{ formatNumber(video.like_count) }}</td>
-              <td class="text-right font-mono text-cyber-green">${{ video.price_usd || '0' }}</td>
+              <td class="text-right font-mono text-cyber-green">${{ Number(video.price_usd || 0).toFixed(2) }}</td>
               <td class="text-sm whitespace-nowrap dark:text-gray-500 text-gray-400">{{ formatDate(video.created_at) }}</td>
             </tr>
             <tr v-if="recentVideos.length === 0">
@@ -260,7 +260,7 @@ const stats = ref([
   { title: '视频数', value: 0, color: '#00d4ff' },
   { title: '播放量', value: 0, color: '#a855f7' },
   { title: '金额($)', value: 0, color: '#10b981', format: (v) => v ? Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00' },
-  { title: 'CPM', value: 0, color: '#ec4899', format: (v) => v.toFixed(2) }
+  { title: 'CPM', value: 0, color: '#ec4899', format: (v) => v.toFixed(3) }
 ])
 
 const trendUnits = [
