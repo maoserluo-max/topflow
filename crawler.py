@@ -80,22 +80,82 @@ class TopFlowCrawler:
                         return candidate
         return ''
 
-    def _fetch_instagram_play_count(self, video_url: str) -> int:
-        """通过 Instagram GraphQL API 补充获取播放量
+    def _fetch_instagram_play_count(self, video_url: str, cookies_content: str = '') -> int:
+        """通过多种方式补充获取 Instagram 播放量
         
-        yt-dlp 在未登录状态下不返回 Instagram 的播放量，
-        因为 yt-dlp 的 Instagram extractor 在非登录路径中遗漏了 view_count 字段。
-        GraphQL API 返回 video_play_count（更准确）和 video_view_count。
+        yt-dlp 在未登录和已登录路径下都可能不返回 Instagram 的播放量。
+        依次尝试以下方案：
+        A. GraphQL API（带 csrftoken 和 cookies）
+        B. 使用 yt-dlp 重新提取（带 cookies，走登录路径获取 view_count）
         """
+        # 从 URL 中提取 shortcode
+        match = re.search(r'instagram\.com/(?:p|reels?|tv)/([^/?#&]+)', video_url)
+        if not match:
+            print(f"  Instagram: 无法从 URL 提取 shortcode: {video_url}")
+            return 0
+        shortcode = match.group(1)
+        print(f"  Instagram: 开始补充获取 shortcode={shortcode} 的播放量...")
+
+        # 方案A: GraphQL API（带 csrftoken）
+        play_count = self._ig_graphql_play_count(shortcode, video_url, cookies_content)
+        if play_count:
+            return play_count
+
+        # 方案B: 使用 yt-dlp 带.cookies 重新提取
+        if cookies_content and cookies_content.strip():
+            print(f"  Instagram: GraphQL 未获取到播放量，尝试使用 yt-dlp + cookies 重新提取...")
+            play_count = self._ig_ytdlp_with_cookies(video_url, cookies_content)
+            if play_count:
+                return play_count
+
+        print(f"  Instagram: 所有补充获取方案均未获取到播放量")
+        return 0
+
+    def _ig_graphql_play_count(self, shortcode: str, video_url: str, cookies_content: str = '') -> int:
+        """方案A: 通过 Instagram GraphQL API 获取播放量"""
         try:
+            import ssl
             from urllib.request import Request, urlopen
             from urllib.parse import urlencode
-            # 从 URL 中提取 shortcode
-            match = re.search(r'instagram\.com/(?:p|reels?|tv)/([^/?#&]+)', video_url)
-            if not match:
-                return 0
-            shortcode = match.group(1)
+            from http.cookiejar import CookieJar
 
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+
+            # 第一步：先访问 Instagram 页面获取 csrftoken
+            csrf_token = ''
+            cookie_header = ''
+            ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+
+            try:
+                homepage_req = Request('https://www.instagram.com/', headers={
+                    'User-Agent': ua,
+                    'Accept': 'text/html,application/xhtml+xml',
+                })
+                with urlopen(homepage_req, timeout=10, context=ctx) as resp:
+                    set_cookies = resp.headers.get_all('Set-Cookie') or []
+                    for sc in set_cookies:
+                        if 'csrftoken=' in sc:
+                            csrf_token = sc.split('csrftoken=')[1].split(';')[0]
+                            break
+            except Exception as e:
+                print(f"  Instagram GraphQL: 获取 csrftoken 失败: {str(e)[:80]}")
+
+            # 解析用户提供的 cookies
+            user_cookies = ''
+            if cookies_content and cookies_content.strip():
+                user_cookies = self._parse_cookies_to_header(cookies_content)
+
+            # 构建 Cookie 头：合并 csrftoken 和用户 cookies
+            cookie_parts = []
+            if csrf_token:
+                cookie_parts.append(f'csrftoken={csrf_token}')
+            if user_cookies:
+                cookie_parts.append(user_cookies)
+            cookie_header = '; '.join(cookie_parts)
+
+            # 第二步：请求 GraphQL API
             variables = {
                 'shortcode': shortcode,
                 'child_comment_count': 3,
@@ -109,7 +169,7 @@ class TopFlowCrawler:
             })
             api_url = f'https://www.instagram.com/graphql/query/?{query_params}'
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'User-Agent': ua,
                 'X-IG-App-ID': '936619743392459',
                 'X-ASBD-ID': '198387',
                 'X-IG-WWW-Claim': '0',
@@ -118,8 +178,13 @@ class TopFlowCrawler:
                 'X-Requested-With': 'XMLHttpRequest',
                 'Referer': video_url,
             }
+            if csrf_token:
+                headers['X-CSRFToken'] = csrf_token
+            if cookie_header:
+                headers['Cookie'] = cookie_header
+
             req = Request(api_url, headers=headers)
-            with urlopen(req, timeout=15) as resp:
+            with urlopen(req, timeout=15, context=ctx) as resp:
                 if resp.status != 200:
                     print(f"  Instagram GraphQL API 返回 {resp.status}")
                     return 0
@@ -128,25 +193,74 @@ class TopFlowCrawler:
             data = json.loads(body)
             media = data.get('data', {}).get('xdt_shortcode_media', {})
             if not media:
-                print(f"  Instagram GraphQL 无 xdt_shortcode_media, data keys: {list(data.get('data', {}).keys())}")
+                print(f"  Instagram GraphQL: 无 xdt_shortcode_media, keys={list(data.get('data', {}).keys())}")
                 return 0
 
-            # video_play_count 是 reels 的播放次数（更准确）
-            # video_view_count 是视频观看次数
             play_count = (
                 media.get('video_play_count')
                 or media.get('video_view_count')
                 or 0
             )
             if play_count:
-                print(f"  Instagram GraphQL 补充获取播放量: {play_count}")
+                print(f"  Instagram GraphQL: 获取播放量成功: {play_count}")
             else:
-                print(f"  Instagram GraphQL 未找到播放量字段, media keys: {[k for k in media.keys() if 'view' in k.lower() or 'play' in k.lower() or 'count' in k.lower()]}")
+                debug_keys = [k for k in media.keys() if any(w in k.lower() for w in ['view', 'play', 'count'])]
+                print(f"  Instagram GraphQL: 未找到播放量, 相关键: {debug_keys}")
             return play_count
 
         except Exception as e:
-            print(f"  Instagram GraphQL 补充获取播放量失败: {type(e).__name__}: {str(e)[:200]}")
+            print(f"  Instagram GraphQL: 失败 {type(e).__name__}: {str(e)[:150]}")
             return 0
+
+    def _ig_ytdlp_with_cookies(self, video_url: str, cookies_content: str) -> int:
+        """方案B: 使用 yt-dlp 带 cookies 重新提取 Instagram 视频信息
+        当有 cookies（特别是 sessionid）时，yt-dlp 会走 Instagram 的登录路径，
+        在 _extract_product 方法中获取 view_count。
+        """
+        try:
+            opts = dict(self._base_opts)
+            opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+            if cookies_content and cookies_content.strip():
+                opts['cookiefile'] = self._write_temp_cookies(cookies_content)
+
+            try:
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(video_url, download=False)
+
+                if info:
+                    # 从 yt-dlp 的 info 中获取播放量
+                    play_count = (
+                        info.get('view_count')
+                        or info.get('play_count')
+                        or info.get('video_view_count')
+                        or 0
+                    )
+                    if play_count:
+                        print(f"  Instagram yt-dlp+cookies: 获取播放量成功: {play_count}")
+                    else:
+                        print(f"  Instagram yt-dlp+cookies: 播放量仍为空 (view_count={info.get('view_count')}, play_count={info.get('play_count')})")
+                    return play_count
+            finally:
+                self._cleanup_cookies(opts)
+
+        except Exception as e:
+            print(f"  Instagram yt-dlp+cookies: 失败 {str(e)[:150]}")
+            return 0
+
+    def _parse_cookies_to_header(self, cookies_content: str) -> str:
+        """将 Netscape 格式的 cookies 文件内容解析为 HTTP Cookie 头"""
+        parts = []
+        for line in cookies_content.strip().splitlines():
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            fields = line.split('\t')
+            if len(fields) >= 7:
+                name = fields[5].strip()
+                value = fields[6].strip()
+                if name and value:
+                    parts.append(f'{name}={value}')
+        return '; '.join(parts) if parts else ''
 
     def _write_temp_cookies(self, content: str) -> str:
         tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, prefix='ydl_cookies_')
@@ -302,9 +416,13 @@ class TopFlowCrawler:
             info = self._retry_with_backoff(_do_extract, max_retries=3, url=video_url)
             result = _build_result(info)
 
-            # Instagram: yt-dlp 未登录时不返回播放量，通过 GraphQL API 补充
+            # Instagram: yt-dlp 在未登录和已登录路径下都可能不返回播放量
+            # 未登录: extractor 不返回 view_count
+            # 已登录: _extract_product 返回 view_count，但 Instagram API 对 reels 可能返回 None
+            # 通过 GraphQL API 补充获取
             if platform == 'ins' and not result.get('play_count'):
-                extra_play = self._fetch_instagram_play_count(video_url)
+                print(f"  Instagram 播放量为空，尝试通过 GraphQL API 补充获取...")
+                extra_play = self._fetch_instagram_play_count(video_url, cookies_content)
                 if extra_play:
                     result['play_count'] = extra_play
 
@@ -318,6 +436,34 @@ class TopFlowCrawler:
             print(f"\n[爬虫错误] 视频数据抓取失败")
             print(f"  URL: {video_url}")
             print(f"  原因: {error_str[:300]}")
+
+            # Instagram 被 rate limit 时，yt-dlp 直接抛异常，但我们仍可尝试 GraphQL 补充
+            if platform == 'ins' and ('rate-limit' in error_str.lower() or 'login' in error_str.lower()):
+                print(f"  Instagram: yt-dlp 被 rate limit，尝试通过 GraphQL API 获取基础数据...")
+                ig_match = re.search(r'instagram\.com/(?:p|reels?|tv)/([^/?#&]+)', video_url)
+                if ig_match:
+                    try:
+                        extra_play = self._ig_graphql_play_count(ig_match.group(1), video_url, cookies_content)
+                        if extra_play:
+                            # 即使 yt-dlp 失败，GraphQL 仍可获取播放量
+                            result = {
+                                "influencer_name": '',
+                                "video_title": '',
+                                "publish_date": '',
+                                "play_count": extra_play,
+                                "like_count": 0,
+                                "comment_count": 0,
+                                "share_count": 0,
+                                "platform": platform,
+                                "video_url": video_url
+                            }
+                            print(f"✅ Instagram GraphQL 兜底成功: 播放:{extra_play}")
+                            self.last_error = None
+                            return result
+                        else:
+                            print(f"  Instagram GraphQL 兜底也未获取到播放量")
+                    except Exception as e2:
+                        print(f"  Instagram GraphQL 兜底失败: {str(e2)[:100]}")
 
             if platform == 'youtube':
                 # YouTube 格式不可用时，依次尝试不同 player_client

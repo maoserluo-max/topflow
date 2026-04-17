@@ -518,6 +518,22 @@ async def fetch_metadata(
                 raise HTTPException(status_code=400, detail=f"抓取失败: {last_err[:200]}")
             raise HTTPException(status_code=400, detail="无法获取视频数据，请检查链接是否正确或稍后重试")
 
+        # Instagram 播放量兜底：crawler 层可能未获取到，后端再补充一次
+        if platform == 'ins' and not data.get('play_count'):
+            print(f"  后端兜底：Instagram 播放量为空(play_count={data.get('play_count')})，尝试补充获取...")
+            try:
+                extra_play = await asyncio.to_thread(crawler._fetch_instagram_play_count, request.url, cookies_content)
+                if extra_play:
+                    data['play_count'] = extra_play
+                    print(f"  后端兜底成功：补充获取播放量 {extra_play}")
+                else:
+                    print(f"  后端兜底：所有方案均未能获取到播放量")
+            except Exception as e:
+                print(f"  后端兜底失败：{type(e).__name__}: {str(e)[:100]}")
+
+        # 最终日志：输出完整的播放量信息
+        print(f"✅ 抓取完成: {request.url} -> play_count={data.get('play_count')}, like_count={data.get('like_count')}, comment_count={data.get('comment_count')}")
+
         log = OperationLog(
             user_id=current_user.id,
             action="抓取视频元数据",
@@ -527,7 +543,6 @@ async def fetch_metadata(
         db.add(log)
         db.commit()
 
-        print(f"✅ 抓取成功: {request.url} -> {data.get('influencer_name', 'N/A')}")
         return data
     except HTTPException:
         raise
