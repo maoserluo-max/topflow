@@ -28,6 +28,13 @@
           </svg>
           导出CSV
         </button>
+        <button v-if="canExport" @click="triggerImportCSV" class="cyber-button flex items-center gap-2 text-sm font-medium ml-3" style="background: linear-gradient(to right, #7c3aed, #6d28d9);">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          导入CSV
+        </button>
+        <input ref="csvFileInput" type="file" accept=".csv" class="hidden" @change="handleImportCSV" />
       </div>
     </div>
 
@@ -438,6 +445,7 @@ const editingVideo = ref(null)
 const detailVisible = ref(false)
 const detailData = ref(null)
 const formDialogRef = ref(null)
+const csvFileInput = ref(null)
 
 const userRole = computed(() => userStore.user?.role || '')
 const isAdmin = computed(() => userRole.value === 'admin')
@@ -656,6 +664,62 @@ async function exportCSV() {
   } catch (error) {
     console.error('Export error:', error)
     ElMessage.error('导出失败')
+  }
+}
+
+function triggerImportCSV() {
+  csvFileInput.value?.click()
+}
+
+async function handleImportCSV(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  if (!file.name.endsWith('.csv')) {
+    ElMessage.warning('请选择CSV格式文件')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要导入文件「${file.name}」吗？CSV中的数据将作为新视频记录添加。`,
+      '确认导入',
+      { confirmButtonText: '确定导入', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch {
+    event.target.value = ''
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
+    const result = await api.post('/videos/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    const { created, skipped, total, errors } = result
+    let msg = `导入完成：共 ${total} 条，成功 ${created} 条，跳过 ${skipped} 条`
+    if (errors && errors.length > 0) {
+      msg += `\n\n前 ${errors.length} 条错误：\n${errors.join('\n')}`
+    }
+
+    if (created > 0) {
+      ElMessage.success(`成功导入 ${created} 条视频记录${skipped > 0 ? `，跳过 ${skipped} 条` : ''}`)
+      fetchVideos()
+    } else if (skipped > 0) {
+      ElMessage.warning(`未导入任何记录，共跳过 ${skipped} 条`)
+      if (errors && errors.length > 0) {
+        console.warn('导入错误详情：', errors)
+      }
+    }
+  } catch (error) {
+    console.error('Import error:', error)
+    const msg = error?.response?.data?.detail || '导入失败'
+    ElMessage.error(typeof msg === 'string' ? msg : '导入失败')
+  } finally {
+    event.target.value = ''
   }
 }
 

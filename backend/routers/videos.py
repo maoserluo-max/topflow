@@ -1,7 +1,7 @@
 import sys
 sys.path.append('..')
 from crawler import TopFlowCrawler
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, asc
@@ -228,6 +228,146 @@ def export_videos(
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+@router.post("/import")
+async def import_videos(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_leader_or_above),
+    db: Session = Depends(get_db)
+):
+    """导入CSV格式的视频数据"""
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="仅支持CSV格式文件")
+
+    content = await file.read()
+    # 尝试多种编码
+    for encoding in ['utf-8-sig', 'utf-8', 'gbk', 'gb2312']:
+        try:
+            text = content.decode(encoding)
+            break
+        except (UnicodeDecodeError, LookupError):
+            continue
+    else:
+        raise HTTPException(status_code=400, detail="无法识别文件编码，请使用UTF-8编码")
+
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+
+    if len(rows) < 2:
+        raise HTTPException(status_code=400, detail="CSV文件为空或没有数据行")
+
+    # CSV 列映射（与导出格式一致）
+    # 项目, 视频编号, 视频类型, 内容方向, 平台, 地区, 达人名称, 标题, 价格(USD), 发布日期, 播放量, 点赞数, 评论数, 分享数, CPM, 状态, 负责人, 邮箱, WhatsApp, 视频链接
+    status_reverse_map = {
+        "待审核": "pending_review", "待发布": "pending_publish",
+        "已发布": "published", "已完成": "completed"
+    }
+
+    created_count = 0
+    skipped_count = 0
+    errors = []
+
+    for i, row in enumerate(rows[1:], start=2):  # 跳过表头，从第2行开始
+        if len(row) < 8:  # 至少需要基本字段
+            skipped_count += 1
+            errors.append(f"第{i}行: 列数不足，已跳过")
+            continue
+
+        try:
+            project = row[0].strip() if len(row) > 0 else "Gamoji"
+            video_code = row[1].strip() if len(row) > 1 else None
+            video_types = row[2].strip() if len(row) > 2 else None
+            content_direction = row[3].strip() if len(row) > 3 else None
+            platform = row[4].strip() if len(row) > 4 else "tiktok"
+            region = row[5].strip() if len(row) > 5 else None
+            influencer_name = row[6].strip() if len(row) > 6 else None
+            title = row[7].strip() if len(row) > 7 else None
+            price_usd = float(row[8].strip()) if len(row) > 8 and row[8].strip() else None
+            publish_date = row[9].strip() if len(row) > 9 and row[9].strip() else None
+            play_count = int(row[10].strip()) if len(row) > 10 and row[10].strip() else 0
+            like_count = int(row[11].strip()) if len(row) > 11 and row[11].strip() else 0
+            comment_count = int(row[12].strip()) if len(row) > 12 and row[12].strip() else 0
+            share_count = int(row[13].strip()) if len(row) > 13 and row[13].strip() else 0
+            # CPM (row[14]) 是计算字段，跳过
+            status_text = row[15].strip() if len(row) > 15 else "待审核"
+            contact_person = row[16].strip() if len(row) > 16 else None
+            contact_email = row[17].strip() if len(row) > 17 else None
+            contact_whatsapp = row[18].strip() if len(row) > 18 else None
+            video_url = row[19].strip() if len(row) > 19 else None
+
+            # 验证必填字段
+            if not influencer_name:
+                skipped_count += 1
+                errors.append(f"第{i}行: 达人名称为空，已跳过")
+                continue
+            if not platform:
+                platform = "tiktok"
+
+            # 状态映射
+            status = status_reverse_map.get(status_text, status_text)
+            if status not in ['pending_review', 'pending_publish', 'published', 'completed']:
+                status = 'pending_review'
+
+            # 发布日期解析
+            publish_date_val = None
+            if publish_date:
+                try:
+                    publish_date_val = datetime.strptime(publish_date, "%Y-%m-%d")
+                except ValueError:
+                    publish_date_val = None
+
+            # 如果没有视频编号，自动生成
+            if not video_code and region and content_direction and publish_date_val:
+                video_code = generate_video_code(db, region, content_direction, publish_date_val)
+
+            # 检查视频编号是否重复
+            if video_code:
+                existing = db.query(Video).filter(Video.video_code == video_code).first()
+                if existing:
+                    skipped_count += 1
+                    errors.append(f"第{i}行: 视频编号 {video_code} 已存在，已跳过")
+                    continue
+
+            new_video = Video(
+                video_code=video_code,
+                project=project or "Gamoji",
+                platform=platform,
+                region=region,
+                content_direction=content_direction,
+                video_types=video_types,
+                influencer_name=influencer_name,
+                price_usd=price_usd,
+                title=title,
+                publish_date=publish_date_val,
+                play_count=play_count,
+                like_count=like_count,
+                comment_count=comment_count,
+                share_count=share_count,
+                status=status,
+                contact_person=contact_person,
+                contact_email=contact_email,
+                contact_whatsapp=contact_whatsapp,
+                video_url=video_url,
+                creator_id=current_user.id,
+                stats_updated_at=datetime.utcnow()
+            )
+            db.add(new_video)
+            created_count += 1
+        except Exception as e:
+            skipped_count += 1
+            errors.append(f"第{i}行: {str(e)[:80]}，已跳过")
+            continue
+
+    db.commit()
+
+    result = {
+        "created": created_count,
+        "skipped": skipped_count,
+        "total": len(rows) - 1,
+        "errors": errors[:20]  # 最多返回20条错误
+    }
+    return result
 
 
 @router.get("/{video_id}", response_model=VideoResponse)
