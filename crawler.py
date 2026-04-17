@@ -88,7 +88,8 @@ class TopFlowCrawler:
         GraphQL API 返回 video_play_count（更准确）和 video_view_count。
         """
         try:
-            import requests as req
+            from urllib.request import Request, urlopen
+            from urllib.parse import urlencode
             # 从 URL 中提取 shortcode
             match = re.search(r'instagram\.com/(?:p|reels?|tv)/([^/?#&]+)', video_url)
             if not match:
@@ -102,6 +103,11 @@ class TopFlowCrawler:
                 'parent_comment_count': 24,
                 'has_threaded_comments': True,
             }
+            query_params = urlencode({
+                'doc_id': '8845758582119845',
+                'variables': json.dumps(variables, separators=(',', ':')),
+            })
+            api_url = f'https://www.instagram.com/graphql/query/?{query_params}'
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                 'X-IG-App-ID': '936619743392459',
@@ -112,22 +118,17 @@ class TopFlowCrawler:
                 'X-Requested-With': 'XMLHttpRequest',
                 'Referer': video_url,
             }
-            r = req.get(
-                'https://www.instagram.com/graphql/query/',
-                headers=headers,
-                params={
-                    'doc_id': '8845758582119845',
-                    'variables': json.dumps(variables, separators=(',', ':')),
-                },
-                timeout=15,
-            )
-            if r.status_code != 200:
-                print(f"  Instagram GraphQL API 返回 {r.status_code}")
-                return 0
+            req = Request(api_url, headers=headers)
+            with urlopen(req, timeout=15) as resp:
+                if resp.status != 200:
+                    print(f"  Instagram GraphQL API 返回 {resp.status}")
+                    return 0
+                body = resp.read().decode('utf-8')
 
-            data = r.json()
+            data = json.loads(body)
             media = data.get('data', {}).get('xdt_shortcode_media', {})
             if not media:
+                print(f"  Instagram GraphQL 无 xdt_shortcode_media, data keys: {list(data.get('data', {}).keys())}")
                 return 0
 
             # video_play_count 是 reels 的播放次数（更准确）
@@ -139,10 +140,12 @@ class TopFlowCrawler:
             )
             if play_count:
                 print(f"  Instagram GraphQL 补充获取播放量: {play_count}")
+            else:
+                print(f"  Instagram GraphQL 未找到播放量字段, media keys: {[k for k in media.keys() if 'view' in k.lower() or 'play' in k.lower() or 'count' in k.lower()]}")
             return play_count
 
         except Exception as e:
-            print(f"  Instagram GraphQL 补充获取播放量失败: {str(e)[:100]}")
+            print(f"  Instagram GraphQL 补充获取播放量失败: {type(e).__name__}: {str(e)[:200]}")
             return 0
 
     def _write_temp_cookies(self, content: str) -> str:
