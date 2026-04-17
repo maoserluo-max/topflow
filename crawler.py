@@ -4,6 +4,8 @@ import time
 import random
 import os
 import tempfile
+import re
+import json
 
 
 class TopFlowCrawler:
@@ -77,6 +79,71 @@ class TopFlowCrawler:
                     if os.path.isfile(candidate):
                         return candidate
         return ''
+
+    def _fetch_instagram_play_count(self, video_url: str) -> int:
+        """通过 Instagram GraphQL API 补充获取播放量
+        
+        yt-dlp 在未登录状态下不返回 Instagram 的播放量，
+        因为 yt-dlp 的 Instagram extractor 在非登录路径中遗漏了 view_count 字段。
+        GraphQL API 返回 video_play_count（更准确）和 video_view_count。
+        """
+        try:
+            import requests as req
+            # 从 URL 中提取 shortcode
+            match = re.search(r'instagram\.com/(?:p|reels?|tv)/([^/?#&]+)', video_url)
+            if not match:
+                return 0
+            shortcode = match.group(1)
+
+            variables = {
+                'shortcode': shortcode,
+                'child_comment_count': 3,
+                'fetch_comment_count': 40,
+                'parent_comment_count': 24,
+                'has_threaded_comments': True,
+            }
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'X-IG-App-ID': '936619743392459',
+                'X-ASBD-ID': '198387',
+                'X-IG-WWW-Claim': '0',
+                'Origin': 'https://www.instagram.com',
+                'Accept': '*/*',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Referer': video_url,
+            }
+            r = req.get(
+                'https://www.instagram.com/graphql/query/',
+                headers=headers,
+                params={
+                    'doc_id': '8845758582119845',
+                    'variables': json.dumps(variables, separators=(',', ':')),
+                },
+                timeout=15,
+            )
+            if r.status_code != 200:
+                print(f"  Instagram GraphQL API 返回 {r.status_code}")
+                return 0
+
+            data = r.json()
+            media = data.get('data', {}).get('xdt_shortcode_media', {})
+            if not media:
+                return 0
+
+            # video_play_count 是 reels 的播放次数（更准确）
+            # video_view_count 是视频观看次数
+            play_count = (
+                media.get('video_play_count')
+                or media.get('video_view_count')
+                or 0
+            )
+            if play_count:
+                print(f"  Instagram GraphQL 补充获取播放量: {play_count}")
+            return play_count
+
+        except Exception as e:
+            print(f"  Instagram GraphQL 补充获取播放量失败: {str(e)[:100]}")
+            return 0
 
     def _write_temp_cookies(self, content: str) -> str:
         tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, prefix='ydl_cookies_')
@@ -231,6 +298,13 @@ class TopFlowCrawler:
         try:
             info = self._retry_with_backoff(_do_extract, max_retries=3, url=video_url)
             result = _build_result(info)
+
+            # Instagram: yt-dlp 未登录时不返回播放量，通过 GraphQL API 补充
+            if platform == 'ins' and not result.get('play_count'):
+                extra_play = self._fetch_instagram_play_count(video_url)
+                if extra_play:
+                    result['play_count'] = extra_play
+
             print(f"✅ 抓取成功: {result.get('influencer_name', 'N/A')} - 播放:{result.get('play_count', 0)}")
             self.last_error = None
             return result
