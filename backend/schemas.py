@@ -325,6 +325,7 @@ class VideoResponse(VideoBase):
 class OperationLogResponse(BaseModel):
     id: int
     user_id: int
+    username: Optional[str] = None
     action: str
     module: Optional[str]
     detail: Optional[str]

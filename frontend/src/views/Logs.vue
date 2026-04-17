@@ -97,6 +97,7 @@
           <thead>
             <tr>
               <th>ID</th>
+              <th>用户</th>
               <th>操作类型</th>
               <th>模块</th>
               <th>详情</th>
@@ -107,6 +108,7 @@
           <tbody>
             <tr v-for="(log, index) in logs" :key="log.id" class="group animate-in" :style="{ animationDelay: `${index * 50}ms` }">
               <td class="font-mono text-xs dark:text-gray-500 text-gray-500">#{{ log.id }}</td>
+              <td class="text-sm dark:text-gray-300 text-gray-700">{{ log.username || '-' }}</td>
               <td>
                 <span
                   class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold"

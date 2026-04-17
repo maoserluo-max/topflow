@@ -42,8 +42,16 @@ def get_operation_logs(
     total = query.count()
     logs = query.order_by(desc(OperationLog.created_at)).offset((page - 1) * page_size).limit(page_size).all()
 
+    # 构建响应，附带用户名
+    items = []
+    for log in logs:
+        item = OperationLogResponse.from_orm(log)
+        item_dict = item.model_dump() if hasattr(item, 'model_dump') else item.dict()
+        item_dict['username'] = log.user.username if log.user else None
+        items.append(item_dict)
+
     return {
-        "items": [OperationLogResponse.from_orm(log) for log in logs],
+        "items": items,
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -92,7 +100,7 @@ def export_logs(
     def generate():
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["ID", "用户ID", "操作", "模块", "详情", "IP地址", "时间"])
+        writer.writerow(["ID", "用户", "操作", "模块", "详情", "IP地址", "时间"])
         yield output.getvalue()
         output.seek(0)
         output.truncate(0)
@@ -100,7 +108,7 @@ def export_logs(
         for log in logs:
             writer.writerow([
                 log.id,
-                log.user_id,
+                log.user.username if log.user else "",
                 log.action,
                 log.module or "",
                 log.detail or "",
