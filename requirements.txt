@@ -7,6 +7,6 @@ python-jose[cryptography]>=3.3.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 python-multipart>=0.0.6
-yt-dlp>=2023.1.10
+yt-dlp[default]>=2023.1.10
 aiofiles>=23.0.0
 httpx>=0.25.0

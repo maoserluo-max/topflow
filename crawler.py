@@ -30,12 +30,13 @@ class TopFlowCrawler:
         if platform == 'youtube':
             opts.update({
                 'extract_flat': False,
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['android'],
-                    }
-                },
+                # 不再硬编码 player_client，让 yt-dlp 自动选择可用客户端
+                # 避免因缺少 PO Token 导致格式不可用
             })
+            # 尝试配置 deno 运行时路径（解决 YouTube n challenge）
+            deno_path = self._find_deno()
+            if deno_path:
+                opts['js_runtimes'] = {'deno': {'path': deno_path}}
         else:
             opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
@@ -43,6 +44,39 @@ class TopFlowCrawler:
             opts['cookiefile'] = self._write_temp_cookies(cookies_content)
 
         return opts
+
+    def _find_deno(self) -> str:
+        """查找 deno 可执行文件路径"""
+        import shutil
+        # 1. 直接在 PATH 中查找
+        deno = shutil.which('deno')
+        if deno:
+            return deno
+        # 2. 常见安装路径
+        import os
+        common_paths = [
+            os.path.expandvars(r'%LOCALAPPDATA%\Microsoft\WinGet\Packages\DenoLand.Deno_Microsoft.Winget.Source_8wekyb3d8bbwe\deno.exe'),
+            os.path.expanduser('~/.deno/bin/deno.exe'),
+            r'C:\Program Files\Deno\deno.exe',
+        ]
+        for p in common_paths:
+            # 使用 glob 模式匹配 WinGet 的包目录名
+            if '*' in p:
+                import glob
+                matches = glob.glob(p)
+                if matches:
+                    return matches[0]
+            elif os.path.isfile(p):
+                return p
+        # 3. 在 WinGet Packages 下模糊搜索
+        winget_dir = os.path.expandvars(r'%LOCALAPPDATA%\Microsoft\WinGet\Packages')
+        if os.path.isdir(winget_dir):
+            for d in os.listdir(winget_dir):
+                if d.lower().startswith('denoland'):
+                    candidate = os.path.join(winget_dir, d, 'deno.exe')
+                    if os.path.isfile(candidate):
+                        return candidate
+        return ''
 
     def _write_temp_cookies(self, content: str) -> str:
         tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, prefix='ydl_cookies_')
@@ -174,11 +208,19 @@ class TopFlowCrawler:
                 return ydl.extract_info(video_url, download=False)
 
         def _build_result(info):
+            # Instagram 播放数字段可能在不同位置
+            # view_count 是标准字段，但 Instagram 可能返回 play_count 或 video_view_count
+            play_count = (
+                info.get('view_count')
+                or info.get('play_count')
+                or info.get('video_view_count')
+                or 0
+            )
             return {
                 "influencer_name": info.get('uploader') or info.get('channel', ''),
                 "video_title": info.get('title', ''),
                 "publish_date": info.get('upload_date', ''),
-                "play_count": info.get('view_count', 0),
+                "play_count": play_count,
                 "like_count": info.get('like_count', 0),
                 "comment_count": info.get('comment_count', 0),
                 "share_count": info.get('repost_count', 0),
@@ -200,7 +242,42 @@ class TopFlowCrawler:
             print(f"  URL: {video_url}")
             print(f"  原因: {error_str[:300]}")
 
-            if 'sign in' in error_str.lower() or 'bot' in error_str.lower():
+            if platform == 'youtube':
+                # YouTube 格式不可用时，依次尝试不同 player_client
+                fallback_clients = [
+                    ['ios'], ['mweb'], ['android'],
+                    ['web'], ['web_safari', 'ios'],
+                ]
+                for clients in fallback_clients:
+                    client_name = ','.join(clients)
+                    print(f"\n💡 尝试使用 {client_name} 客户端重试...")
+                    try:
+                        fallback_opts = dict(self._base_opts)
+                        fallback_opts.update({
+                            'extract_flat': False,
+                            'extractor_args': {
+                                'youtube': {
+                                    'player_client': clients,
+                                }
+                            },
+                        })
+                        deno_path = self._find_deno()
+                        if deno_path:
+                            fallback_opts['js_runtimes'] = {'deno': {'path': deno_path}}
+                        if cookies_content and cookies_content.strip():
+                            fallback_opts['cookiefile'] = self._write_temp_cookies(cookies_content)
+                        with yt_dlp.YoutubeDL(fallback_opts) as ydl:
+                            info = ydl.extract_info(video_url, download=False)
+                        result = _build_result(info)
+                        print(f"✅ {client_name} 客户端抓取成功: {result.get('influencer_name', 'N/A')}")
+                        self.last_error = None
+                        self._cleanup_cookies(fallback_opts)
+                        return result
+                    except Exception as e2:
+                        print(f"  {client_name} 客户端也失败: {str(e2)[:200]}")
+                        self._cleanup_cookies(fallback_opts)
+                        continue
+            elif 'sign in' in error_str.lower() or 'bot' in error_str.lower():
                 print("\n💡 被识别为机器人，尝试使用ios客户端重试...")
                 try:
                     ios_opts = dict(self._base_opts)

@@ -8,8 +8,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     curl \
     ca-certificates \
+    unzip \
     && rm -rf /var/lib/apt/lists/* \
     && update-ca-certificates
+
+# 安装 deno 运行时（yt-dlp 需要 JS 运行时解决 YouTube n challenge）
+RUN curl -fsSL https://deno.land/install.sh | sh && \
+    mv /root/.deno/bin/deno /usr/local/bin/deno && \
+    chmod +x /usr/local/bin/deno
 
 COPY requirements.txt .
 
@@ -17,8 +23,8 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt || \
     (echo "尝试使用国内镜像源..." && \
      pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt) && \
-    pip install --no-cache-dir --upgrade yt-dlp || \
-    pip install --no-cache-dir --upgrade -i https://pypi.tuna.tsinghua.edu.cn/simple yt-dlp
+    pip install --no-cache-dir --upgrade "yt-dlp[default]" || \
+    pip install --no-cache-dir --upgrade -i https://pypi.tuna.tsinghua.edu.cn/simple "yt-dlp[default]"
 
 COPY backend/ ./
 COPY crawler.py .
