@@ -560,6 +560,12 @@ async function handleSubmit() {
     emit('submitted')
     emit('close')
   } catch (error) {
+    const detail = error?.response?.data?.detail
+    if (detail) {
+      ElMessage.warning(detail)
+    } else {
+      ElMessage.error('操作失败')
+    }
     console.error('Submit error:', error)
   } finally {
     submitting.value = false

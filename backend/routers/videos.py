@@ -40,6 +40,43 @@ def create_video(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    # 重复检测：视频链接或链接中的视频ID重复
+    if video.video_url and video.video_url.strip():
+        url = video.video_url.strip()
+
+        # 1. 精确链接匹配
+        existing = db.query(Video).filter(Video.video_url == url).first()
+        if existing:
+            raise HTTPException(status_code=409, detail=f"该视频已创建，编号为{existing.video_code or existing.id}")
+
+        # 2. 视频ID匹配（从URL中提取平台视频ID）
+        import re as _re
+        platform_video_id = None
+        if 'tiktok.com' in url:
+            m = _re.search(r'/video/(\d+)', url)
+            if m:
+                platform_video_id = m.group(1)
+        elif 'instagram.com' in url:
+            m = _re.search(r'/reel/([A-Za-z0-9_-]+)', url)
+            if not m:
+                m = _re.search(r'/p/([A-Za-z0-9_-]+)', url)
+            if m:
+                platform_video_id = m.group(1)
+        elif 'youtube.com' in url or 'youtu.be' in url:
+            m = _re.search(r'[?&]v=([A-Za-z0-9_-]+)', url)
+            if not m:
+                m = _re.search(r'youtu\.be/([A-Za-z0-9_-]+)', url)
+            if not m:
+                m = _re.search(r'/shorts/([A-Za-z0-9_-]+)', url)
+            if m:
+                platform_video_id = m.group(1)
+
+        if platform_video_id:
+            # 在所有现有视频链接中搜索包含该视频ID的记录
+            dup = db.query(Video).filter(Video.video_url.contains(platform_video_id)).first()
+            if dup and dup.video_url != url:
+                raise HTTPException(status_code=409, detail=f"该视频已创建，编号为{dup.video_code or dup.id}")
+
     new_video = Video(**video.dict(), creator_id=current_user.id)
     if not new_video.video_code:
         new_video.video_code = generate_video_code(db, video.region, video.content_direction, video.publish_date)

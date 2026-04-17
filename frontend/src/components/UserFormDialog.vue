@@ -30,7 +30,7 @@
                   type="text"
                   required
                   placeholder="输入用户名"
-                  :disabled="isEdit"
+                  :disabled="isEdit && !isAdminUser"
                   class="w-full px-4 py-3 rounded-xl dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:placeholder-gray-600 bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-cyber-blue/50 focus:outline-none focus:ring-2 focus:ring-cyber-blue/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
@@ -214,6 +214,7 @@ const canChangeProjects = computed(() => {
 })
 
 const isAdminRole = computed(() => form.role === 'admin')
+const isAdminUser = computed(() => userStore.user?.role === 'admin')
 
 // 可选的上级候选人：角色级别高于或等于当前选择的角色（管理员可以选管理员作为上级）
 const parentCandidates = computed(() => {

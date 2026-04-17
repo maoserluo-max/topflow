@@ -232,6 +232,12 @@ def update_user(
             raise HTTPException(status_code=403, detail="不能将用户角色提升到高于自身级别")
         update_data["role"] = new_role
 
+    # 修改用户名时检查是否重名
+    if "username" in update_data and update_data["username"]:
+        existing = db.query(User).filter(User.username == update_data["username"], User.id != user_id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="用户名已存在")
+
     # 验证 parent_id 有效性
     if "parent_id" in update_data and update_data["parent_id"] is not None:
         parent = db.query(User).filter(User.id == update_data["parent_id"]).first()

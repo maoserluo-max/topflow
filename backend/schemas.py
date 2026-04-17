@@ -23,8 +23,8 @@ class UserBase(BaseModel):
             raise ValueError('用户名至少2个字符')
         if len(v) > 50:
             raise ValueError('用户名不能超过50个字符')
-        if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fff]+$', v):
-            raise ValueError('用户名只能包含字母、数字、下划线和中文')
+        if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fff（）\(\)]+$', v):
+            raise ValueError('用户名只能包含字母、数字、下划线、中文和括号')
         return v
 
 
@@ -104,6 +104,7 @@ class InviteCodeResponse(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    username: Optional[str] = None
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     role: Optional[str] = None
@@ -111,6 +112,18 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     projects: Optional[str] = None
     password: Optional[str] = None
+
+    @field_validator('username')
+    @classmethod
+    def validate_username(cls, v):
+        if v is not None:
+            if len(v) < 2:
+                raise ValueError('用户名至少2个字符')
+            if len(v) > 50:
+                raise ValueError('用户名不能超过50个字符')
+            if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fff（）\(\)]+$', v):
+                raise ValueError('用户名只能包含字母、数字、下划线、中文和括号')
+        return v
 
     @field_validator('role')
     @classmethod
