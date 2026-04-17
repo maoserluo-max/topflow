@@ -503,15 +503,18 @@ def get_user_delivery(
     # 构建用户ID到用户对象的映射
     user_map = {u.id: u for u in users}
 
+    # 构建 username -> user_id 映射（用于通过 contact_person 匹配）
+    username_to_id = {u.username: u.id for u in users}
+
     # 构建父子关系（如果parent是admin，则视为根节点）
     children_map = {}  # parent_id -> [child_ids]
     for u in users:
         if u.parent_id and u.parent_id in user_map:
             children_map.setdefault(u.parent_id, []).append(u.id)
 
-    # 查询每个用户的视频统计数据
+    # 查询每个用户的视频统计数据（按 contact_person 匹配负责人）
     video_query = db.query(
-        Video.creator_id,
+        Video.contact_person,
         func.count(Video.id).label('video_count'),
         func.coalesce(func.sum(Video.price_usd), 0).label('total_amount'),
         func.coalesce(func.sum(Video.play_count), 0).label('total_plays'),
@@ -520,7 +523,7 @@ def get_user_delivery(
         func.coalesce(func.sum(Video.share_count), 0).label('total_shares'),
     )
 
-    video_query = video_query.filter(Video.creator_id.in_(user_map.keys()))
+    video_query = video_query.filter(Video.contact_person.in_(username_to_id.keys()))
     video_query = video_query.filter(Video.project.in_(user_projects))
 
     if start_date:
@@ -531,11 +534,15 @@ def get_user_delivery(
         video_query = video_query.filter(Video.project == project)
 
     stats_by_user = {}
-    for row in video_query.group_by(Video.creator_id).all():
+    for row in video_query.group_by(Video.contact_person).all():
+        # 通过 contact_person（username）找到对应的 user_id
+        uid = username_to_id.get(row.contact_person)
+        if not uid:
+            continue
         plays = row.total_plays or 0
         amount = row.total_amount or 0
         count = row.video_count or 0
-        stats_by_user[row.creator_id] = {
+        stats_by_user[uid] = {
             'video_count': count,
             'total_amount': round(amount, 2),
             'total_plays': plays,
